@@ -1,0 +1,4 @@
+# Normalize line endings to LF on commit, convert to CRLF on checkout for Windows
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

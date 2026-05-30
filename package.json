@@ -1,0 +1,50 @@
+{
+  "name": "team-trading-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "next": "15.3.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@prisma/client": "^6.9.0",
+    "next-auth": "^5.0.0-beta.29",
+    "bcryptjs": "^3.0.2",
+    "tailwindcss": "^3.4.17",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.3.0",
+    "lucide-react": "^0.511.0",
+    "recharts": "^2.15.3",
+    "@tanstack/react-table": "^8.21.3",
+    "react-hook-form": "^7.56.4",
+    "@hookform/resolvers": "^5.0.1",
+    "zod": "^3.25.46",
+    "xlsx": "^0.18.5",
+    "@ducanh2912/next-pwa": "^10.2.9",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/bcryptjs": "^2.4.6",
+    "prisma": "^6.9.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.3",
+    "ts-node": "^10.9.2",
+    "postcss": "^8",
+    "autoprefixer": "^10"
+  }
+}

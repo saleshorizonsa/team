@@ -1,0 +1,11 @@
+// Prisma schema — fully defined in Phase 1 (database setup).
+// Placeholder keeps `prisma generate` from failing during scaffold phase.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
