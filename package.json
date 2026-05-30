@@ -32,7 +32,10 @@
     "zod": "^3.25.46",
     "xlsx": "^0.18.5",
     "@ducanh2912/next-pwa": "^10.2.9",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/utilities": "^3.2.2",
+    "sonner": "^2.0.3"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

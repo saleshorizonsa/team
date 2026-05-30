@@ -5,20 +5,23 @@ import type { Session } from "next-auth";
 export type Action =
   | "read"         // any authenticated user
   | "create"       // any authenticated user
-  | "editOwn"      // USER: own record in DRAFT; ADMIN: any
-  | "deleteOwn"    // USER: own record in DRAFT; ADMIN: any
+  | "editOwn"      // USER: own record (no status gate); ADMIN: any
+  | "deleteOwn"    // USER: own record (no status gate); ADMIN: any
+  | "editOwnDraft" // USER: own record AND status === "DRAFT"; ADMIN: any
+  | "deleteOwnDraft" // USER: own record AND status === "DRAFT"; ADMIN: any
   | "editAny"      // ADMIN only
   | "deleteAny"    // ADMIN only
   | "approve"      // ADMIN only
   | "adminOnly";   // ADMIN only (settings, user management)
 
 export interface AuthzTarget {
-  createdById?: string;
-  status?: string; // DealStatus or LeadStage value
+  createdById?: string;  // also accepts ownerId via alias
+  ownerId?: string;
+  status?: string;       // DealStatus value — only checked for …Draft actions
 }
 
 // ─── Central authorization gate ───────────────────────────────────────────────
-// Call this in EVERY API route / server action before any DB mutation.
+// Call in EVERY API route / server action before any DB mutation.
 // Throws AuthzError on failure — never returns false silently.
 
 export function authorize(
@@ -30,20 +33,30 @@ export function authorize(
 
   const { role, id: userId } = session.user;
   const isAdmin = role === "ADMIN";
+  const ownerId = target?.createdById ?? target?.ownerId;
 
   switch (action) {
     case "read":
     case "create":
-      return; // all authenticated users
+      return;
 
     case "editOwn":
     case "deleteOwn": {
       if (isAdmin) return;
       if (!target) throw new AuthzError("Target required", 400);
-      if (target.createdById !== userId)
-        throw new AuthzError("You can only edit your own records", 403);
+      if (ownerId !== userId)
+        throw new AuthzError("You can only modify your own records", 403);
+      return;
+    }
+
+    case "editOwnDraft":
+    case "deleteOwnDraft": {
+      if (isAdmin) return;
+      if (!target) throw new AuthzError("Target required", 400);
+      if (ownerId !== userId)
+        throw new AuthzError("You can only modify your own records", 403);
       if (target.status !== "DRAFT")
-        throw new AuthzError("Only DRAFT records can be edited", 403);
+        throw new AuthzError("Only DRAFT records can be modified", 403);
       return;
     }
 
@@ -57,7 +70,7 @@ export function authorize(
   }
 }
 
-// ─── Convenience wrappers (for API routes returning JSON responses) ────────────
+// ─── Convenience helpers ──────────────────────────────────────────────────────
 
 export function isAdmin(session: Session | null): boolean {
   return session?.user?.role === "ADMIN";
