@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Plus, Handshake, Plug } from "lucide-react";
+import { Plus, Handshake, Plug, CheckCheck, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -58,6 +58,8 @@ export function DealsClient({
   const [returning, setReturning] = useState<Deal | null>(null);
   const [zohoOpen, setZohoOpen] = useState(false);
   const [busyLoading, setBusyLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkApproving, setBulkApproving] = useState(false);
 
   const upsert = useCallback((saved: Deal) => {
     setDeals((prev) => {
@@ -128,8 +130,77 @@ export function DealsClient({
   function openCreate() { setEditing(null); setPrefill(null); setFormOpen(true); }
   function openEdit(d: Deal) { setEditing(d); setPrefill(null); setFormOpen(true); }
 
+  // ── bulk approve (admin) ──
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const submittedIds = useMemo(
+    () => filtered.filter((d) => d.status === "SUBMITTED").map((d) => d.id),
+    [filtered]
+  );
+  const allSubmittedSelected = submittedIds.length > 0 && submittedIds.every((id) => selectedIds.has(id));
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const everySelected = submittedIds.length > 0 && submittedIds.every((id) => prev.has(id));
+      return everySelected ? new Set() : new Set(submittedIds);
+    });
+  }, [submittedIds]);
+
+  async function handleBulkApprove() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkApproving(true);
+    try {
+      const res = await fetch("/api/deals/bulk-approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Bulk approve failed");
+      const { approved, skipped, deals: updated } = await res.json();
+      (updated as Deal[]).forEach(upsert);
+      setSelectedIds(new Set());
+      toast.success(`Approved ${approved} deal(s)${skipped ? ` · ${skipped} skipped` : ""}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Bulk approve failed");
+    } finally {
+      setBulkApproving(false);
+    }
+  }
+
   // ── columns ──
   const columns = useMemo<ColumnDef<Deal, unknown>[]>(() => [
+    ...(isAdmin ? [{
+      id: "select",
+      enableSorting: false,
+      header: () => (
+        <input
+          type="checkbox"
+          aria-label="Select all submitted deals"
+          className="h-4 w-4 cursor-pointer accent-primary disabled:cursor-not-allowed disabled:opacity-40"
+          checked={allSubmittedSelected}
+          disabled={submittedIds.length === 0}
+          onChange={toggleSelectAll}
+        />
+      ),
+      cell: ({ row }: { row: { original: Deal } }) =>
+        row.original.status === "SUBMITTED" ? (
+          <input
+            type="checkbox"
+            aria-label={`Select ${row.original.dealNumber}`}
+            className="h-4 w-4 cursor-pointer accent-primary"
+            checked={selectedIds.has(row.original.id)}
+            onChange={() => toggleSelect(row.original.id)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : null,
+    } as ColumnDef<Deal, unknown>] : []),
     {
       accessorKey: "dealNumber",
       header: "Deal #",
@@ -213,7 +284,7 @@ export function DealsClient({
         />
       ),
     },
-  ], [isAdmin, sessionUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+  ], [isAdmin, sessionUserId, selectedIds, allSubmittedSelected, submittedIds, toggleSelect, toggleSelectAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasFilters = !!(search || filterStatus || filterSalesperson || filterFrom || filterTo);
 
@@ -246,6 +317,22 @@ export function DealsClient({
         <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="w-36 h-9" title="From date" />
         <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="w-36 h-9" title="To date" />
       </div>
+
+      {/* Bulk-approve action bar (admin) */}
+      {isAdmin && selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5">
+          <span className="text-sm font-medium">{selectedIds.size} deal(s) selected</span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} disabled={bulkApproving}>
+              <X className="h-4 w-4" /> Clear
+            </Button>
+            <Button size="sm" onClick={handleBulkApprove} disabled={bulkApproving}>
+              {bulkApproving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
+              Approve selected
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Table / empty */}
       {deals.length === 0 ? (

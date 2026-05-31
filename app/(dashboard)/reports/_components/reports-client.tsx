@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Download, Printer, Loader2, FileSpreadsheet } from "lucide-react";
+import { Download, Printer, Loader2, FileSpreadsheet, DatabaseBackup } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { exportToExcel } from "@/lib/export";
+import { exportToExcel, exportWorkbook, type WorkbookSheet } from "@/lib/export";
 import type { ReportType } from "@/lib/reports";
 
 const TABS: { value: ReportType; label: string }[] = [
@@ -38,13 +38,29 @@ function fmtCell(col: string, val: string | number): string {
   return val;
 }
 
-export function ReportsClient({ users }: { users: { id: string; fullName: string }[] }) {
+export function ReportsClient({ users, isAdmin }: { users: { id: string; fullName: string }[]; isAdmin: boolean }) {
   const [type, setType] = useState<ReportType>("sales");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [salespersonId, setSalespersonId] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
+
+  async function exportAll() {
+    setBackingUp(true);
+    try {
+      const res = await fetch("/api/export/all");
+      if (!res.ok) throw new Error((await res.json()).error ?? "Export failed");
+      const { sheets } = (await res.json()) as { sheets: WorkbookSheet[] };
+      exportWorkbook(`team-backup-${new Date().toISOString().slice(0, 10)}.xlsx`, sheets);
+      toast.success("Full backup downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setBackingUp(false);
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,6 +110,11 @@ export function ReportsClient({ users }: { users: { id: string; fullName: string
   return (
     <div className="space-y-5">
       <PageHeader title="Reports" description="Filter, export to Excel, or print a statement">
+        {isAdmin && (
+          <Button size="sm" variant="outline" onClick={exportAll} disabled={backingUp} title="Download every table as one Excel workbook">
+            {backingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <DatabaseBackup className="h-4 w-4" />} Export All
+          </Button>
+        )}
         <Button size="sm" variant="outline" onClick={openPrint} disabled={rows.length === 0}>
           <Printer className="h-4 w-4" /> Print
         </Button>

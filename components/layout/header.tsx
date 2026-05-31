@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/lib/use-theme";
+import { NotificationBell } from "./notification-bell";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -15,6 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/suppliers": "Suppliers",
   "/audit": "Activity",
   "/settings": "Settings",
+  "/account": "My Account",
 };
 
 function getTitle(pathname: string): string {
@@ -38,6 +41,9 @@ export function Header() {
       <h2 className="text-base font-semibold">{getTitle(pathname)}</h2>
 
       <div className="flex items-center gap-2">
+        {/* Notifications */}
+        <NotificationBell />
+
         {/* Dark mode toggle */}
         <button
           onClick={toggle}
@@ -47,13 +53,14 @@ export function Header() {
           {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
 
-        {/* User avatar */}
-        <div
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-xs font-semibold text-primary"
-          title={session?.user?.email ?? ""}
+        {/* User avatar → My Account */}
+        <Link
+          href="/account"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-xs font-semibold text-primary transition-colors hover:bg-primary/30"
+          title={session?.user?.email ? `${session.user.email} — My Account` : "My Account"}
         >
           {initials}
-        </div>
+        </Link>
       </div>
     </header>
   );

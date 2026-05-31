@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { authorize, AuthzError } from "@/lib/authz";
 import { logAudit } from "@/lib/audit";
+import { notifyAdmins } from "@/lib/notify";
 
 const INCLUDE = {
   customer: { select: { id: true, name: true } },
@@ -43,6 +44,14 @@ export async function PATCH(_req: Request, { params }: { params: Promise<{ id: s
       before: { status: deal.status },
       after: { status: "SUBMITTED" },
     });
+
+    // Notify all admins (except the submitter) that a deal awaits approval.
+    await notifyAdmins(
+      "DEAL_SUBMITTED",
+      `${updated.dealNumber} submitted for approval by ${updated.createdBy.fullName}`,
+      "/deals",
+      session!.user.id
+    );
 
     return Response.json(updated);
   } catch (e) {

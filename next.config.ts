@@ -1,5 +1,16 @@
 import type { NextConfig } from "next";
+import { execSync } from "node:child_process";
 import withPWAInit from "@ducanh2912/next-pwa";
+
+// Capture the commit being built so /api/version can confirm what's live.
+function gitSha(): string {
+  if (process.env.NEXT_PUBLIC_BUILD_SHA) return process.env.NEXT_PUBLIC_BUILD_SHA;
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
 
 const withPWA = withPWAInit({
   dest: "public",
@@ -20,6 +31,10 @@ const withPWA = withPWAInit({
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: gitSha(),
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  },
   async headers() {
     return [
       {

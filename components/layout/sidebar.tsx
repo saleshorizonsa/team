@@ -13,6 +13,7 @@ import {
   Settings,
   ScrollText,
   FileText,
+  UserCog,
   ChevronLeft,
   Menu,
   LogOut,
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { href: "/suppliers",    label: "Suppliers",   icon: Truck },
   { href: "/audit",        label: "Activity",    icon: ScrollText },
   { href: "/settings",     label: "Settings",    icon: Settings,    adminOnly: true },
+  { href: "/account",      label: "My Account",  icon: UserCog },
 ];
 
 export function Sidebar() {

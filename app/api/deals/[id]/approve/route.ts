@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { authorize, AuthzError } from "@/lib/authz";
 import { logAudit } from "@/lib/audit";
+import { notify } from "@/lib/notify";
 import { generateCommissionsForDeal } from "@/lib/commission-service";
 
 const INCLUDE = {
@@ -50,6 +51,16 @@ export async function PATCH(_req: Request, { params }: { params: Promise<{ id: s
       before: { status: "SUBMITTED" },
       after: { status: "APPROVED", approvedById: session!.user.id },
     });
+
+    // Notify the deal's creator (unless they approved their own).
+    if (deal.createdById !== session!.user.id) {
+      await notify([{
+        userId: deal.createdById,
+        type: "DEAL_APPROVED",
+        message: `${updated.dealNumber} was approved`,
+        link: "/deals",
+      }]);
+    }
 
     return Response.json(updated);
   } catch (e) {

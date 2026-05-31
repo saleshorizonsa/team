@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { DollarSign, CheckCircle2, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { DollarSign, CheckCircle2, Loader2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -36,7 +37,13 @@ function periodLabel(period: string): string {
   return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
 
-export function CommissionsClient({ initialCommissions, isAdmin }: Props) {
+function monthBounds(period: string): { from: string; to: string } {
+  const [y, m] = period.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { from: `${period}-01`, to: `${period}-${String(lastDay).padStart(2, "0")}` };
+}
+
+export function CommissionsClient({ initialCommissions, isAdmin, sessionUserId }: Props) {
   const [commissions, setCommissions] = useState(initialCommissions);
   const [periodFilter, setPeriodFilter] = useState("");
   const [payingIds, setPayingIds] = useState<string[] | null>(null);
@@ -162,6 +169,8 @@ export function CommissionsClient({ initialCommissions, isAdmin }: Props) {
             <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
               {[...byUser.entries()].map(([uid, u]) => {
                 const balance = carried.get(uid)?.get(period) ?? u.net;
+                const bounds = monthBounds(period);
+                const canPrint = isAdmin || uid === sessionUserId;
                 return (
                   <div key={uid} className="bg-card p-3">
                     <div className="flex items-center justify-between">
@@ -169,10 +178,22 @@ export function CommissionsClient({ initialCommissions, isAdmin }: Props) {
                         <span className={cn("inline-block h-1.5 w-1.5 rounded-full", u.role === "ADMIN" ? "bg-purple-500" : "bg-primary")} />
                         {u.name}
                       </span>
-                      {isAdmin && u.pendingIds.length > 0 && (
-                        <button onClick={() => payIds(u.pendingIds)} disabled={!!payingIds}
-                          className="text-[11px] text-primary hover:underline disabled:opacity-50">Settle</button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {canPrint && (
+                          <Link
+                            href={`/print/payout?userId=${uid}&from=${bounds.from}&to=${bounds.to}`}
+                            target="_blank"
+                            className="flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-primary hover:underline"
+                            title="Print payout statement for this period"
+                          >
+                            <Printer className="h-3 w-3" /> Statement
+                          </Link>
+                        )}
+                        {isAdmin && u.pendingIds.length > 0 && (
+                          <button onClick={() => payIds(u.pendingIds)} disabled={!!payingIds}
+                            className="text-[11px] text-primary hover:underline disabled:opacity-50">Settle</button>
+                        )}
+                      </div>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
                       {u.earnings !== 0 && <span className="text-green-600 dark:text-green-400">Earned {formatSAR(u.earnings)}</span>}
