@@ -48,7 +48,7 @@ export async function GET(req: Request) {
     const ids = invoices.map((i) => i.invoice_id);
     const imported = ids.length
       ? await db.deal.findMany({
-          where: { zohoInvoiceId: { in: ids } },
+          where: { zohoInvoiceId: { in: ids }, deletedAt: null },
           select: { zohoInvoiceId: true, dealNumber: true },
         })
       : [];

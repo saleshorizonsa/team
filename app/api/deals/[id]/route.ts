@@ -113,7 +113,11 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       authorize(session, "deleteOwn", { createdById: deal.createdById });
     }
 
-    await db.deal.update({ where: { id }, data: { deletedAt: new Date() } });
+    // Soft-delete; also free the Zoho invoice link so the invoice can be re-imported.
+    await db.deal.update({
+      where: { id },
+      data: { deletedAt: new Date(), zohoInvoiceId: null, zohoInvoiceNumber: null },
+    });
 
     // Unlink any lead that pointed to this deal
     await db.lead.updateMany({

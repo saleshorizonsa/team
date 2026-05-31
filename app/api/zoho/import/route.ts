@@ -26,8 +26,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { invoiceId, salespersonIds, purchaseTotal } = importSchema.parse(body);
 
-    // Idempotency: block double import
-    const existing = await db.deal.findUnique({ where: { zohoInvoiceId: invoiceId } });
+    // Idempotency: block double import (ignore soft-deleted deals — re-importable)
+    const existing = await db.deal.findFirst({ where: { zohoInvoiceId: invoiceId, deletedAt: null } });
     if (existing) {
       return Response.json(
         { error: `Already imported as ${existing.dealNumber}`, dealNumber: existing.dealNumber },
