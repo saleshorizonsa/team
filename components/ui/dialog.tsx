@@ -44,12 +44,12 @@ export function Dialog({ open, onClose, title, description, children, className 
         aria-modal
         aria-label={title}
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-xl border bg-card shadow-2xl",
+          "relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border bg-card shadow-2xl",
           className
         )}
       >
         {/* Header */}
-        <div className="flex items-start justify-between border-b px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between border-b px-6 py-4">
           <div>
             <h2 className="text-base font-semibold leading-none">{title}</h2>
             {description && (
@@ -64,8 +64,8 @@ export function Dialog({ open, onClose, title, description, children, className 
             <X className="h-4 w-4" />
           </button>
         </div>
-        {/* Body */}
-        <div className="p-6">{children}</div>
+        {/* Body (scrolls when content is taller than the viewport) */}
+        <div className="flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>,
     document.body
