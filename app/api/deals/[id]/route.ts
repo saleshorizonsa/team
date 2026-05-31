@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { authorize, AuthzError, isAdmin } from "@/lib/authz";
+import { authorize, AuthzError } from "@/lib/authz";
 import { logAudit } from "@/lib/audit";
 import { dealSchema } from "@/lib/validations";
 

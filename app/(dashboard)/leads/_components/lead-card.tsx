@@ -2,7 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Pencil, Trash2, DollarSign } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { cn, formatSAR } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { SOURCE_LABELS, type Lead } from "./lead-types";

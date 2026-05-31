@@ -7,15 +7,11 @@ export const metadata = { title: "Customers" };
 export default async function CustomersPage() {
   const session = await auth();
 
-  const [customers, suppliers] = await Promise.all([
-    db.customer.findMany({
-      where: { deletedAt: null },
-      include: { createdBy: { select: { id: true, fullName: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    // preload suppliers for deal forms later
-    Promise.resolve([]),
-  ]);
+  const customers = await db.customer.findMany({
+    where: { deletedAt: null },
+    include: { createdBy: { select: { id: true, fullName: true } } },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <CustomersClient

@@ -13,7 +13,6 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { leadSchema, type LeadInput, leadSources, leadStages } from "@/lib/validations";
 import { SOURCE_LABELS, STAGE_CONFIG, type Lead } from "./lead-types";
-import { formatSAR } from "@/lib/utils";
 
 interface Props {
   open: boolean;
