@@ -12,6 +12,7 @@ import {
   DollarSign,
   Settings,
   ScrollText,
+  FileText,
   ChevronLeft,
   Menu,
   LogOut,
@@ -33,9 +34,10 @@ const navItems: NavItem[] = [
   { href: "/leads",        label: "Leads",       icon: TrendingUp },
   { href: "/deals",        label: "Deals",       icon: Handshake },
   { href: "/commissions",  label: "Commissions", icon: DollarSign },
+  { href: "/reports",      label: "Reports",     icon: FileText },
   { href: "/customers",    label: "Customers",   icon: Users },
   { href: "/suppliers",    label: "Suppliers",   icon: Truck },
-  { href: "/audit",        label: "Audit Log",   icon: ScrollText,  phase: 5, adminOnly: true },
+  { href: "/audit",        label: "Activity",    icon: ScrollText },
   { href: "/settings",     label: "Settings",    icon: Settings,    adminOnly: true },
 ];
 
