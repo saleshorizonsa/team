@@ -136,21 +136,76 @@ public/
 | Phase | Scope |
 |-------|-------|
 | **0** | Scaffold — structure, config, layout shell, PWA ✅ |
-| **1** | Auth + DB — Prisma schema, seed, login, session, authz helper |
-| **2** | Core data — Customers, Suppliers, Leads, Deals CRUD + approval flow |
-| **3** | Commissions — calculation engine, payouts, dashboard KPIs + charts |
-| **4** | Settings + Admin — commission rules editor, user management, audit log |
-| **5** | Export + Polish — Excel/PDF export, PWA polish, empty states, perf |
+| **1** | Auth + DB — Prisma schema, seed, login, session, authz helper ✅ |
+| **2** | Core data — Customers, Suppliers, Leads (kanban) CRUD ✅ |
+| **3** | Deals — TanStack table, approval workflow, live profit/commission ✅ |
+| **4** | Commissions + Settings — generation on approval, share editor, users ✅ |
+| **5** | Dashboard + Reports — KPIs, charts, Excel/PDF export, audit/activity ✅ |
+| **6** | Polish & Deploy — dark mode, PWA icons, security, sample data ✅ |
 
 ---
 
-## Deployment (Hostinger)
+## Deployment (Hostinger) — exact steps
 
-1. Push to GitHub; connect repo to Hostinger Cloud Node.js Web App.
-2. Set all environment variables in the Hostinger control panel.
-3. Framework is auto-detected as Next.js; build command: `npm run build`; start: `npm start`.
-4. Database: use `localhost` if app and MySQL share the same Hostinger account; otherwise enable Remote MySQL and whitelist the server IP.
-5. Ensure HTTPS is enforced (Hostinger provides free SSL).
+> Tested on Hostinger shared hosting with the Node.js app manager and MySQL (MariaDB). The query engine used by `@prisma/client` works at runtime; the Prisma **migration** CLI may be blocked by the host's sandbox, so the schema is applied with the SQL file in `prisma/sql/` (see step 6b).
+
+### 1. Push to GitHub
+```bash
+git push origin master
+```
+
+### 2. hPanel → create the MySQL database
+**hPanel → Databases → MySQL Databases**
+- Create a database (e.g. `uXXXXXXXXX_team`) and a user; note the username/password.
+- Host is `localhost` when the app and DB are on the same account (it is, here).
+
+### 3. hPanel → Add Website / Node.js App
+**hPanel → Websites → Add Website → Node.js** (or **Advanced → Node.js Apps**)
+- Point it at your domain (e.g. `team.horizon-sa.net`).
+
+### 4. Import the Git repository
+In the Node.js app → **Import Git Repository**
+- Repository: `https://github.com/saleshorizonsa/team.git`
+- Branch: `master`
+- Build command: `npm run build`
+- Start command: `npm start`
+- Node version: **20+**
+
+### 5. Set environment variables
+In the Node.js app → **Environment Variables**, add:
+
+| Key | Value |
+|-----|-------|
+| `DATABASE_URL` | `mysql://USER:PASS@localhost:3306/DBNAME` (URL-encode `@`→`%40` etc. in the password) |
+| `NEXTAUTH_SECRET` | output of `openssl rand -base64 32` |
+| `AUTH_SECRET` | same value as `NEXTAUTH_SECRET` |
+| `NEXTAUTH_URL` | `https://your-domain.com` |
+| `NEXT_PUBLIC_APP_URL` | `https://your-domain.com` |
+| `SEED_ADMIN_EMAIL` | `shareef6695@gmail.com` |
+| `SEED_ADMIN_PASSWORD` | your chosen admin password |
+| `SEED_SAMPLE_DATA` | `false` (set `true` once if you want demo data) |
+
+### 6. Deploy
+Click **Deploy**. `npm install` runs (which auto-runs `prisma generate`), then `npm run build`.
+
+### 6b. Create the database tables
+Via **hPanel → Databases → phpMyAdmin** (or SSH `mysql`), run the schema once:
+```bash
+mysql -u USER -p DBNAME < prisma/sql/schema.sql
+```
+(If your plan's Prisma CLI is not sandboxed, `npm run db:migrate` works instead.)
+
+### 7. Seed the admin account
+From the app's SSH terminal, in the deployed source directory:
+```bash
+npm run db:seed
+```
+This creates the admin from `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` and the default
+commission rules. With `SEED_SAMPLE_DATA=true` it also inserts demo data.
+
+### 8. Sign in
+Open `https://your-domain.com` and sign in. HTTPS/SSL is provided by Hostinger;
+`trustHost` and secure cookies are already configured for the reverse proxy.
 
 ---
 

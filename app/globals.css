@@ -53,8 +53,20 @@
   * {
     @apply border-border;
   }
+  :root { color-scheme: light; }
+  .dark { color-scheme: dark; }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  /* Respect the iOS home-indicator inset for the mobile bottom nav */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

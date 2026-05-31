@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Moon, Sun } from "lucide-react";
-import { useState } from "react";
+import { useTheme } from "@/lib/use-theme";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -27,12 +27,7 @@ function getTitle(pathname: string): string {
 export function Header() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [dark, setDark] = useState(false);
-
-  function toggleDark() {
-    setDark((d) => !d);
-    document.documentElement.classList.toggle("dark");
-  }
+  const { dark, toggle } = useTheme();
 
   const initials = session?.user?.name
     ? session.user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -45,7 +40,7 @@ export function Header() {
       <div className="flex items-center gap-2">
         {/* Dark mode toggle */}
         <button
-          onClick={toggleDark}
+          onClick={toggle}
           className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           aria-label="Toggle dark mode"
         >

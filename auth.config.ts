@@ -3,6 +3,8 @@ import type { NextAuthConfig } from "next-auth";
 // Edge-compatible config — no Prisma or Node.js-only imports here.
 // Used by middleware.ts to protect routes without loading the full auth stack.
 export const authConfig = {
+  // Required when running behind Hostinger's reverse proxy (non-Vercel host)
+  trustHost: true,
   pages: {
     signIn: "/login",
     error: "/login",
