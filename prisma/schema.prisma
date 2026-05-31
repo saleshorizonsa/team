@@ -54,11 +54,17 @@ enum AuditAction {
   PAYOUT
   SETTINGS_CHANGE
   RETURN
+  ZOHO_IMPORT
 }
 
 enum CommissionType {
   EARNING
   CLAWBACK
+}
+
+enum DealSource {
+  MANUAL
+  ZOHO_IMPORT
 }
 
 // ─── Models ───────────────────────────────────────────────────────────────────
@@ -83,6 +89,7 @@ model User {
   commissions      Commission[]
   auditLogs        AuditLog[]
   createdReturns   Return[]
+  zohoConnections  ZohoConnection[]
 }
 
 model Customer {
@@ -168,6 +175,9 @@ model Deal {
   rejectReason   String?    @db.Text
   notes          String?    @db.Text
   dealDate       DateTime
+  source            DealSource @default(MANUAL)
+  zohoInvoiceId     String?    @unique
+  zohoInvoiceNumber String?
   createdById    String
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -244,6 +254,23 @@ model Setting {
   value     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ZohoConnection {
+  id                   String    @id @default(cuid())
+  organizationId       String?
+  apiDomain            String?   // e.g. https://www.zohoapis.sa  (auto-detected)
+  accountsDomain       String?   // e.g. https://accounts.zoho.sa (auto-detected)
+  refreshTokenEnc      String    @db.Text // encrypted at rest (AES-256-GCM)
+  accessToken          String?   @db.Text // transient cache
+  accessTokenExpiresAt DateTime?
+  scopes               String?   @db.Text
+  isActive             Boolean   @default(true)
+  connectedById        String
+  connectedAt          DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  connectedBy User @relation(fields: [connectedById], references: [id])
 }
 
 model AuditLog {

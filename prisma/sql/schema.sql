@@ -98,12 +98,16 @@ CREATE TABLE IF NOT EXISTS `Deal` (
   `rejectReason` TEXT NULL,
   `notes` TEXT NULL,
   `dealDate` DATETIME(3) NOT NULL,
+  `source` ENUM('MANUAL','ZOHO_IMPORT') NOT NULL DEFAULT 'MANUAL',
+  `zohoInvoiceId` VARCHAR(191) NULL,
+  `zohoInvoiceNumber` VARCHAR(191) NULL,
   `createdById` VARCHAR(191) NOT NULL,
   `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   `deletedAt` DATETIME(3) NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `Deal_dealNumber_key` (`dealNumber`),
+  UNIQUE KEY `Deal_zohoInvoiceId_key` (`zohoInvoiceId`),
   KEY `Deal_status_idx` (`status`),
   KEY `Deal_createdById_idx` (`createdById`),
   KEY `Deal_salespersonId_idx` (`salespersonId`),
@@ -170,6 +174,24 @@ CREATE TABLE IF NOT EXISTS `Commission` (
   CONSTRAINT `Commission_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `ZohoConnection` (
+  `id` VARCHAR(191) NOT NULL,
+  `organizationId` VARCHAR(191) NULL,
+  `apiDomain` VARCHAR(191) NULL,
+  `accountsDomain` VARCHAR(191) NULL,
+  `refreshTokenEnc` TEXT NOT NULL,
+  `accessToken` TEXT NULL,
+  `accessTokenExpiresAt` DATETIME(3) NULL,
+  `scopes` TEXT NULL,
+  `isActive` TINYINT(1) NOT NULL DEFAULT 1,
+  `connectedById` VARCHAR(191) NOT NULL,
+  `connectedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `ZohoConnection_connectedById_fkey` (`connectedById`),
+  CONSTRAINT `ZohoConnection_connectedById_fkey` FOREIGN KEY (`connectedById`) REFERENCES `User` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `Setting` (
   `id` VARCHAR(191) NOT NULL,
   `key` VARCHAR(191) NOT NULL,
@@ -183,7 +205,7 @@ CREATE TABLE IF NOT EXISTS `Setting` (
 CREATE TABLE IF NOT EXISTS `AuditLog` (
   `id` VARCHAR(191) NOT NULL,
   `userId` VARCHAR(191) NOT NULL,
-  `action` ENUM('CREATE','UPDATE','DELETE','APPROVE','REJECT','LOGIN','PAYOUT','SETTINGS_CHANGE','RETURN') NOT NULL,
+  `action` ENUM('CREATE','UPDATE','DELETE','APPROVE','REJECT','LOGIN','PAYOUT','SETTINGS_CHANGE','RETURN','ZOHO_IMPORT') NOT NULL,
   `entityType` VARCHAR(191) NOT NULL,
   `entityId` VARCHAR(191) NOT NULL,
   `before` JSON NULL,

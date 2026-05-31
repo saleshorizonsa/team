@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Percent, Users, Building2 } from "lucide-react";
+import { Percent, Users, Building2, Plug } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CommissionRulesForm } from "./commission-rules-form";
 import { UsersManager } from "./users-manager";
 import { CompanyForm } from "./company-form";
+import { ZohoSettings } from "./zoho-settings";
 import type { ManagedUser } from "./settings-types";
 import type { CommissionRules } from "@/lib/commission";
 import type { CompanyInput } from "@/lib/validations";
@@ -31,6 +32,7 @@ export function SettingsClient({ initialRules, initialUsers, initialCompany, cur
           <TabsTrigger value="commission"><Percent className="h-3.5 w-3.5" /> Commission Rules</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
           <TabsTrigger value="company"><Building2 className="h-3.5 w-3.5" /> Company</TabsTrigger>
+          <TabsTrigger value="zoho"><Plug className="h-3.5 w-3.5" /> Zoho Books</TabsTrigger>
         </TabsList>
 
         <TabsContent value="commission">
@@ -43,6 +45,10 @@ export function SettingsClient({ initialRules, initialUsers, initialCompany, cur
 
         <TabsContent value="company">
           <CompanyForm initial={initialCompany} />
+        </TabsContent>
+
+        <TabsContent value="zoho">
+          <ZohoSettings />
         </TabsContent>
       </Tabs>
     </div>

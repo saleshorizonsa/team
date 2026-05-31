@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Plus, Handshake } from "lucide-react";
+import { Plus, Handshake, Plug } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -20,6 +20,7 @@ import { DealActions } from "./deal-actions";
 import { DealDetailDialog } from "./deal-detail-dialog";
 import { RejectDialog } from "./reject-dialog";
 import { ReturnFormDialog } from "./return-form-dialog";
+import { ZohoImportDialog } from "./zoho-import-dialog";
 import { StatusBadge } from "./status-badge";
 import { STATUS_CONFIG, type Deal, type DealStatus } from "./deal-types";
 
@@ -56,6 +57,7 @@ export function DealsClient({
   const [deleting, setDeleting] = useState<Deal | null>(null);
   const [rejecting, setRejecting] = useState<Deal | null>(null);
   const [returning, setReturning] = useState<Deal | null>(null);
+  const [zohoOpen, setZohoOpen] = useState(false);
   const [busyLoading, setBusyLoading] = useState(false);
   const router = useRouter();
 
@@ -207,6 +209,11 @@ export function DealsClient({
   return (
     <div className="space-y-5">
       <PageHeader title="Deals" description={`${deals.length} total`}>
+        {isAdmin && (
+          <Button size="sm" variant="outline" onClick={() => setZohoOpen(true)}>
+            <Plug className="h-4 w-4" /> Import from Zoho
+          </Button>
+        )}
         <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4" /> New Deal
         </Button>
@@ -280,6 +287,15 @@ export function DealsClient({
         deal={returning}
         onSaved={() => { setReturning(null); router.refresh(); }}
       />
+
+      {isAdmin && (
+        <ZohoImportDialog
+          open={zohoOpen}
+          onClose={() => setZohoOpen(false)}
+          users={users}
+          onImported={() => { setZohoOpen(false); router.refresh(); }}
+        />
+      )}
     </div>
   );
 }
