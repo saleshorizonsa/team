@@ -163,6 +163,11 @@ export function DealsClient({
       cell: ({ row }) => <span className="font-mono text-sm tabular-nums">{formatSAR(Number(row.original.salesTotal))}</span>,
     },
     {
+      accessorKey: "purchaseTotal",
+      header: "Purchase",
+      cell: ({ row }) => <span className="font-mono text-sm tabular-nums text-muted-foreground">{formatSAR(Number(row.original.purchaseTotal))}</span>,
+    },
+    {
       accessorKey: "profit",
       header: "Profit",
       cell: ({ row }) => {
