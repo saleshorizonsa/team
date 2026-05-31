@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Plus, Handshake, Plug } from "lucide-react";
 import { toast } from "sonner";
@@ -59,7 +58,6 @@ export function DealsClient({
   const [returning, setReturning] = useState<Deal | null>(null);
   const [zohoOpen, setZohoOpen] = useState(false);
   const [busyLoading, setBusyLoading] = useState(false);
-  const router = useRouter();
 
   const upsert = useCallback((saved: Deal) => {
     setDeals((prev) => {
@@ -299,7 +297,7 @@ export function DealsClient({
         open={!!returning}
         onClose={() => setReturning(null)}
         deal={returning}
-        onSaved={() => { setReturning(null); router.refresh(); }}
+        onSaved={() => { setReturning(null); window.location.reload(); }}
       />
 
       {isAdmin && (
@@ -307,7 +305,7 @@ export function DealsClient({
           open={zohoOpen}
           onClose={() => setZohoOpen(false)}
           users={users}
-          onImported={() => { setZohoOpen(false); router.refresh(); }}
+          onImported={() => { setZohoOpen(false); window.location.reload(); }}
         />
       )}
     </div>
