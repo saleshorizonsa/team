@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import {
-  Plus, Pencil, Trash2, CheckCircle2, XCircle, LogIn, Wallet, Settings as SettingsIcon, Loader2, Activity, RotateCcw,
+  Plus, Pencil, Trash2, CheckCircle2, XCircle, LogIn, Wallet, Settings as SettingsIcon, Loader2, Activity, RotateCcw, FileDown,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "APPROVE" | "REJECT" | "LOGIN" | "PAYOUT" | "SETTINGS_CHANGE" | "RETURN";
+type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "APPROVE" | "REJECT" | "LOGIN" | "PAYOUT" | "SETTINGS_CHANGE" | "RETURN" | "ZOHO_IMPORT";
 
 interface Entry {
   id: string;
@@ -33,6 +33,7 @@ const ACTION_META: Record<AuditAction, { icon: typeof Plus; tint: string; verb: 
   PAYOUT:          { icon: Wallet,       tint: "text-amber-600 bg-amber-50 dark:bg-amber-900/20",   verb: "paid out" },
   SETTINGS_CHANGE: { icon: SettingsIcon, tint: "text-purple-600 bg-purple-50 dark:bg-purple-900/20", verb: "changed settings" },
   RETURN:          { icon: RotateCcw,    tint: "text-orange-600 bg-orange-50 dark:bg-orange-900/20", verb: "recorded a return on" },
+  ZOHO_IMPORT:     { icon: FileDown,     tint: "text-cyan-600 bg-cyan-50 dark:bg-cyan-900/20",     verb: "imported from Zoho" },
 };
 
 const ACTIONS = Object.keys(ACTION_META) as AuditAction[];
