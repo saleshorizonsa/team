@@ -23,6 +23,7 @@ export default async function CommissionsPage() {
   const serialized = commissions.map((c) => ({
     id: c.id,
     period: c.period,
+    type: c.type,
     percent: Number(c.percent),
     amount: Number(c.amount),
     payoutStatus: c.payoutStatus,

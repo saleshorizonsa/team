@@ -18,11 +18,16 @@ const TABS: { value: ReportType; label: string }[] = [
   { value: "profit", label: "Profit" },
   { value: "vat", label: "VAT" },
   { value: "commissions", label: "Commissions" },
+  { value: "returns", label: "Returns" },
 ];
 
 type Row = Record<string, string | number>;
 
-const MONEY_COLS = new Set(["Sales Total", "Purchase Total", "Transportation", "Profit", "VAT Amount", "Amount"]);
+const MONEY_COLS = new Set([
+  "Sales Total", "Purchase Total", "Transportation", "Profit", "VAT Amount", "Amount",
+  "Gross Profit", "Net Profit", "Returns", "Returned Sales", "Cost Recovered",
+  "Return Costs", "Reversed Profit",
+]);
 
 function fmtCell(col: string, val: string | number): string {
   if (typeof val === "number") {

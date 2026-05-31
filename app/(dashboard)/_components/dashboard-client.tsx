@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import {
-  TrendingUp, DollarSign, Receipt, Handshake, Wallet, Clock, Star, Loader2,
+  TrendingUp, DollarSign, Receipt, Handshake, Wallet, Clock, Star, Loader2, RotateCcw,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,9 @@ interface Props {
 
 const KPI_META = [
   { key: "totalSales", label: "Total Sales", icon: TrendingUp, tint: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400" },
-  { key: "totalProfit", label: "Total Profit", icon: DollarSign, tint: "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400" },
+  { key: "totalProfit", label: "Gross Profit", icon: DollarSign, tint: "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400" },
+  { key: "totalReturns", label: "Returns", icon: RotateCcw, tint: "text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400" },
+  { key: "netProfit", label: "Net Profit", icon: DollarSign, tint: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400" },
   { key: "totalVat", label: "Total VAT", icon: Receipt, tint: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 dark:text-indigo-400" },
   { key: "dealCount", label: "Approved Deals", icon: Handshake, tint: "text-violet-600 bg-violet-50 dark:bg-violet-900/20 dark:text-violet-400", count: true },
   { key: "totalCommissions", label: "Total Commissions", icon: Wallet, tint: "text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400" },

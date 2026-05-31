@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Plus, Handshake } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ import { DealFormDialog, type DealFormPrefill } from "./deal-form-dialog";
 import { DealActions } from "./deal-actions";
 import { DealDetailDialog } from "./deal-detail-dialog";
 import { RejectDialog } from "./reject-dialog";
+import { ReturnFormDialog } from "./return-form-dialog";
 import { StatusBadge } from "./status-badge";
 import { STATUS_CONFIG, type Deal, type DealStatus } from "./deal-types";
 
@@ -53,7 +55,9 @@ export function DealsClient({
   const [viewing, setViewing] = useState<Deal | null>(null);
   const [deleting, setDeleting] = useState<Deal | null>(null);
   const [rejecting, setRejecting] = useState<Deal | null>(null);
+  const [returning, setReturning] = useState<Deal | null>(null);
   const [busyLoading, setBusyLoading] = useState(false);
+  const router = useRouter();
 
   const upsert = useCallback((saved: Deal) => {
     setDeals((prev) => {
@@ -152,8 +156,19 @@ export function DealsClient({
       accessorKey: "profit",
       header: "Profit",
       cell: ({ row }) => {
-        const p = Number(row.original.profit);
-        return <span className={cn("font-mono text-sm tabular-nums font-medium", p >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>{formatSAR(p)}</span>;
+        const gross = Number(row.original.profit);
+        const returned = row.original.returnedTotal ?? 0;
+        const net = gross - returned;
+        const color = (v: number) => v >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+        if (returned > 0) {
+          return (
+            <div className="leading-tight">
+              <div className={cn("font-mono text-sm tabular-nums font-medium", color(net))}>{formatSAR(net)}</div>
+              <div className="font-mono text-[10px] text-muted-foreground line-through">{formatSAR(gross)}</div>
+            </div>
+          );
+        }
+        return <span className={cn("font-mono text-sm tabular-nums font-medium", color(gross))}>{formatSAR(gross)}</span>;
       },
     },
     {
@@ -181,6 +196,7 @@ export function DealsClient({
           onSubmit={onSubmitDeal}
           onApprove={onApproveDeal}
           onReject={setRejecting}
+          onReturn={setReturning}
         />
       ),
     },
@@ -256,6 +272,13 @@ export function DealsClient({
         title="Delete Deal"
         description={`Remove ${deleting?.dealNumber}? This cannot be undone.`}
         confirmLabel="Delete"
+      />
+
+      <ReturnFormDialog
+        open={!!returning}
+        onClose={() => setReturning(null)}
+        deal={returning}
+        onSaved={() => { setReturning(null); router.refresh(); }}
       />
     </div>
   );

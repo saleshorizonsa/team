@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import {
-  Plus, Pencil, Trash2, CheckCircle2, XCircle, LogIn, Wallet, Settings as SettingsIcon, Loader2, Activity,
+  Plus, Pencil, Trash2, CheckCircle2, XCircle, LogIn, Wallet, Settings as SettingsIcon, Loader2, Activity, RotateCcw,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "APPROVE" | "REJECT" | "LOGIN" | "PAYOUT" | "SETTINGS_CHANGE";
+type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "APPROVE" | "REJECT" | "LOGIN" | "PAYOUT" | "SETTINGS_CHANGE" | "RETURN";
 
 interface Entry {
   id: string;
@@ -32,6 +32,7 @@ const ACTION_META: Record<AuditAction, { icon: typeof Plus; tint: string; verb: 
   LOGIN:           { icon: LogIn,        tint: "text-slate-600 bg-slate-100 dark:bg-slate-800",     verb: "signed in" },
   PAYOUT:          { icon: Wallet,       tint: "text-amber-600 bg-amber-50 dark:bg-amber-900/20",   verb: "paid out" },
   SETTINGS_CHANGE: { icon: SettingsIcon, tint: "text-purple-600 bg-purple-50 dark:bg-purple-900/20", verb: "changed settings" },
+  RETURN:          { icon: RotateCcw,    tint: "text-orange-600 bg-orange-50 dark:bg-orange-900/20", verb: "recorded a return on" },
 };
 
 const ACTIONS = Object.keys(ACTION_META) as AuditAction[];
@@ -101,7 +102,7 @@ export function AuditClient({ initialEntries, users, isAdmin }: Props) {
             <label className="text-xs text-muted-foreground">Entity</label>
             <Select value={entityType} onChange={(e) => setEntityType(e.target.value)} className="h-9 w-36">
               <option value="">All entities</option>
-              {["Deal", "Lead", "Customer", "Supplier", "Commission", "User", "Setting"].map((x) => (
+              {["Deal", "Return", "Lead", "Customer", "Supplier", "Commission", "User", "Setting"].map((x) => (
                 <option key={x} value={x}>{x}</option>
               ))}
             </Select>

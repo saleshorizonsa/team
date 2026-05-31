@@ -124,11 +124,34 @@ CREATE TABLE IF NOT EXISTS `Deal` (
 ALTER TABLE `Lead` ADD CONSTRAINT `Lead_convertedDealId_fkey`
   FOREIGN KEY (`convertedDealId`) REFERENCES `Deal` (`id`);
 
+CREATE TABLE IF NOT EXISTS `Return` (
+  `id` VARCHAR(191) NOT NULL,
+  `returnNumber` VARCHAR(191) NOT NULL,
+  `dealId` VARCHAR(191) NOT NULL,
+  `returnDate` DATETIME(3) NOT NULL,
+  `returnedSalesAmount` DECIMAL(12,2) NOT NULL,
+  `costRecovered` DECIMAL(12,2) NOT NULL,
+  `returnCosts` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `reversedProfit` DECIMAL(12,2) NOT NULL,
+  `reason` TEXT NULL,
+  `createdById` VARCHAR(191) NOT NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `Return_returnNumber_key` (`returnNumber`),
+  KEY `Return_dealId_idx` (`dealId`),
+  KEY `Return_returnDate_idx` (`returnDate`),
+  KEY `Return_createdById_fkey` (`createdById`),
+  CONSTRAINT `Return_dealId_fkey` FOREIGN KEY (`dealId`) REFERENCES `Deal` (`id`),
+  CONSTRAINT `Return_createdById_fkey` FOREIGN KEY (`createdById`) REFERENCES `User` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `Commission` (
   `id` VARCHAR(191) NOT NULL,
   `dealId` VARCHAR(191) NOT NULL,
+  `returnId` VARCHAR(191) NULL,
   `userId` VARCHAR(191) NOT NULL,
   `role` ENUM('ADMIN','USER') NOT NULL,
+  `type` ENUM('EARNING','CLAWBACK') NOT NULL DEFAULT 'EARNING',
   `percent` DECIMAL(5,2) NOT NULL,
   `amount` DECIMAL(12,2) NOT NULL,
   `period` VARCHAR(191) NOT NULL,
@@ -138,10 +161,12 @@ CREATE TABLE IF NOT EXISTS `Commission` (
   `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   KEY `Commission_dealId_idx` (`dealId`),
+  KEY `Commission_returnId_idx` (`returnId`),
   KEY `Commission_userId_idx` (`userId`),
   KEY `Commission_period_idx` (`period`),
   KEY `Commission_payoutStatus_idx` (`payoutStatus`),
   CONSTRAINT `Commission_dealId_fkey` FOREIGN KEY (`dealId`) REFERENCES `Deal` (`id`),
+  CONSTRAINT `Commission_returnId_fkey` FOREIGN KEY (`returnId`) REFERENCES `Return` (`id`),
   CONSTRAINT `Commission_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -158,7 +183,7 @@ CREATE TABLE IF NOT EXISTS `Setting` (
 CREATE TABLE IF NOT EXISTS `AuditLog` (
   `id` VARCHAR(191) NOT NULL,
   `userId` VARCHAR(191) NOT NULL,
-  `action` ENUM('CREATE','UPDATE','DELETE','APPROVE','REJECT','LOGIN','PAYOUT','SETTINGS_CHANGE') NOT NULL,
+  `action` ENUM('CREATE','UPDATE','DELETE','APPROVE','REJECT','LOGIN','PAYOUT','SETTINGS_CHANGE','RETURN') NOT NULL,
   `entityType` VARCHAR(191) NOT NULL,
   `entityId` VARCHAR(191) NOT NULL,
   `before` JSON NULL,

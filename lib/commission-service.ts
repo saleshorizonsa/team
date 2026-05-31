@@ -42,15 +42,18 @@ export async function generateCommissionsForDeal(
   const deal = await db.deal.findUnique({ where: { id: dealId } });
   if (!deal || deal.status !== "APPROVED" || deal.deletedAt) return;
 
+  // Don't touch a deal whose EARNING commissions have already been paid out.
   const paidCount = await db.commission.count({
-    where: { dealId, payoutStatus: "PAID" },
+    where: { dealId, type: "EARNING", payoutStatus: "PAID" },
   });
   if (paidCount > 0) return;
 
   const r = rules ?? (await getCommissionRules());
   const participants = await activeParticipants();
+  // EARNING lines are always computed on NET profit (gross − returns).
+  const netProfit = Number(deal.profit) - (await reversedTotalForDeal(dealId));
   const lines = computeCommissions({
-    profit: Number(deal.profit),
+    profit: netProfit,
     rules: r,
     participants,
     salespersonId: deal.salespersonId,
@@ -58,13 +61,15 @@ export async function generateCommissionsForDeal(
   const period = periodOf(new Date(deal.dealDate));
 
   await db.$transaction([
-    db.commission.deleteMany({ where: { dealId, payoutStatus: "PENDING" } }),
+    // Only regenerate EARNING lines; CLAWBACK rows are immutable history.
+    db.commission.deleteMany({ where: { dealId, type: "EARNING", payoutStatus: "PENDING" } }),
     ...lines.map((l) =>
       db.commission.create({
         data: {
           dealId,
           userId: l.userId,
           role: l.role,
+          type: "EARNING",
           percent: new Prisma.Decimal(l.percentOfProfit.toFixed(2)),
           amount: new Prisma.Decimal(l.amount.toFixed(2)),
           period,
@@ -73,6 +78,15 @@ export async function generateCommissionsForDeal(
       })
     ),
   ]);
+}
+
+/** Sum of reversedProfit across all returns recorded against a deal. */
+export async function reversedTotalForDeal(dealId: string): Promise<number> {
+  const agg = await db.return.aggregate({
+    where: { dealId },
+    _sum: { reversedProfit: true },
+  });
+  return Number(agg._sum.reversedProfit ?? 0);
 }
 
 /**
@@ -118,9 +132,9 @@ export async function previewRecompute(
     .filter((u) => u.isActive)
     .map((u) => ({ userId: u.id, fullName: u.fullName, role: u.role }));
 
-  // before — current pending totals
+  // before — current pending EARNING totals (clawbacks are unaffected by rules)
   const pending = await db.commission.findMany({
-    where: { payoutStatus: "PENDING" },
+    where: { payoutStatus: "PENDING", type: "EARNING" },
     select: { userId: true, amount: true },
   });
   const before = new Map<string, number>();
@@ -128,7 +142,7 @@ export async function previewRecompute(
     before.set(c.userId, (before.get(c.userId) ?? 0) + Number(c.amount));
   }
 
-  // after — simulate for approved deals without paid rows
+  // after — simulate EARNING on NET profit for approved deals without paid earnings
   const deals = await db.deal.findMany({
     where: { status: "APPROVED", deletedAt: null },
     select: { id: true, profit: true, dealDate: true, salespersonId: true },
@@ -137,12 +151,13 @@ export async function previewRecompute(
   let affectedDeals = 0;
   for (const d of deals) {
     const paid = await db.commission.count({
-      where: { dealId: d.id, payoutStatus: "PAID" },
+      where: { dealId: d.id, type: "EARNING", payoutStatus: "PAID" },
     });
     if (paid > 0) continue;
     affectedDeals++;
+    const netProfit = Number(d.profit) - (await reversedTotalForDeal(d.id));
     const lines = computeCommissions({
-      profit: Number(d.profit),
+      profit: netProfit,
       rules: newRules,
       participants,
       salespersonId: d.salespersonId,

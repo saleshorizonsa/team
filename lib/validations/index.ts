@@ -83,6 +83,25 @@ export const rejectSchema = z.object({
   reason: z.string().min(1, "Rejection reason is required"),
 });
 
+// ─── Return ───────────────────────────────────────────────────────────────────
+
+const money = (label: string) =>
+  z.string().refine((v) => v !== "" && !isNaN(parseFloat(v)) && parseFloat(v) >= 0, `${label} must be a valid amount`);
+
+export const returnSchema = z.object({
+  dealId: z.string().min(1, "Deal is required"),
+  returnDate: z.string().min(1, "Return date is required"),
+  returnedSalesAmount: money("Returned sales amount"),
+  costRecovered: money("Cost recovered"),
+  returnCosts: z
+    .string()
+    .refine((v) => v === "" || (!isNaN(parseFloat(v)) && parseFloat(v) >= 0), "Invalid amount")
+    .optional(),
+  reason: z.string().optional(),
+});
+
+export type ReturnInput = z.infer<typeof returnSchema>;
+
 // ─── Settings: commission rules ───────────────────────────────────────────────
 
 export const commissionRulesSchema = z

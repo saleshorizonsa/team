@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 
-export type ReportType = "sales" | "purchases" | "profit" | "vat" | "commissions";
+export type ReportType = "sales" | "purchases" | "profit" | "vat" | "commissions" | "returns";
 
 export interface ReportFilters {
   from?: string;
@@ -52,11 +52,38 @@ export async function computeReport(type: ReportType, filters: ReportFilters): P
     return rows.map((c) => ({
       Period: c.period,
       User: c.user.fullName,
+      Type: c.type,
       Deal: c.deal.dealNumber,
       Customer: c.deal.customer.name,
       "Percent %": Number(c.percent),
       Amount: Number(c.amount),
       Status: c.payoutStatus,
+    }));
+  }
+
+  if (type === "returns") {
+    const dateFilter: Prisma.DateTimeFilter = {};
+    if (filters.from) dateFilter.gte = new Date(filters.from);
+    if (filters.to) dateFilter.lte = new Date(filters.to);
+    const hasDate = !!(filters.from || filters.to);
+    const rows = await db.return.findMany({
+      where: {
+        ...(hasDate ? { returnDate: dateFilter } : {}),
+        ...(filters.salespersonId ? { deal: { salespersonId: filters.salespersonId } } : {}),
+      },
+      include: { deal: { select: { dealNumber: true, customer: { select: { name: true } } } } },
+      orderBy: { returnDate: "desc" },
+    });
+    return rows.map((r) => ({
+      Return: r.returnNumber,
+      Date: fmtDate(r.returnDate),
+      Deal: r.deal.dealNumber,
+      Customer: r.deal.customer.name,
+      "Returned Sales": Number(r.returnedSalesAmount),
+      "Cost Recovered": Number(r.costRecovered),
+      "Return Costs": Number(r.returnCosts),
+      "Reversed Profit": Number(r.reversedProfit),
+      Reason: r.reason ?? "",
     }));
   }
 
@@ -66,6 +93,7 @@ export async function computeReport(type: ReportType, filters: ReportFilters): P
       customer: { select: { name: true } },
       supplier: { select: { name: true } },
       salesperson: { select: { fullName: true } },
+      returns: { select: { reversedProfit: true } },
     },
     orderBy: { dealDate: "desc" },
   });
@@ -87,15 +115,21 @@ export async function computeReport(type: ReportType, filters: ReportFilters): P
         "Purchase Total": Number(d.purchaseTotal),
       }));
     case "profit":
-      return deals.map((d) => ({
-        Deal: d.dealNumber,
-        Date: fmtDate(d.dealDate),
-        Customer: d.customer.name,
-        "Sales Total": Number(d.salesTotal),
-        "Purchase Total": Number(d.purchaseTotal),
-        Transportation: Number(d.transportation),
-        Profit: Number(d.profit),
-      }));
+      return deals.map((d) => {
+        const gross = Number(d.profit);
+        const returned = d.returns.reduce((s, r) => s + Number(r.reversedProfit), 0);
+        return {
+          Deal: d.dealNumber,
+          Date: fmtDate(d.dealDate),
+          Customer: d.customer.name,
+          "Sales Total": Number(d.salesTotal),
+          "Purchase Total": Number(d.purchaseTotal),
+          Transportation: Number(d.transportation),
+          "Gross Profit": gross,
+          Returns: returned,
+          "Net Profit": gross - returned,
+        };
+      });
     case "vat":
       return deals.map((d) => ({
         Deal: d.dealNumber,

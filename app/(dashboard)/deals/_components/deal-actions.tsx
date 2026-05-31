@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Trash2, Send, Check, X, Eye } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Send, Check, X, Eye, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Deal, DealStatus } from "./deal-types";
 
@@ -15,11 +15,12 @@ interface Props {
   onSubmit: (d: Deal) => void;
   onApprove: (d: Deal) => void;
   onReject: (d: Deal) => void;
+  onReturn: (d: Deal) => void;
 }
 
 export function DealActions({
   deal, isAdmin, sessionUserId,
-  onEdit, onView, onDelete, onSubmit, onApprove, onReject,
+  onEdit, onView, onDelete, onSubmit, onApprove, onReject, onReturn,
 }: Props) {
   const [open, setOpen] = useState(false);
   const isOwner = deal.createdById === sessionUserId;
@@ -33,6 +34,7 @@ export function DealActions({
   const canSubmit =
     (isAdmin || isOwner) && (status === "DRAFT" || status === "REJECTED");
   const canApproveReject = isAdmin && status === "SUBMITTED";
+  const canReturn = isAdmin && status === "APPROVED";
 
   type Item = { label: string; icon: typeof Pencil; onClick: () => void; danger?: boolean; accent?: boolean };
   const items: Item[] = [
@@ -41,6 +43,7 @@ export function DealActions({
     ...(canSubmit ? [{ label: status === "REJECTED" ? "Resubmit" : "Submit", icon: Send, onClick: () => onSubmit(deal), accent: true }] : []),
     ...(canApproveReject ? [{ label: "Approve", icon: Check, onClick: () => onApprove(deal), accent: true }] : []),
     ...(canApproveReject ? [{ label: "Reject", icon: X, onClick: () => onReject(deal), danger: true }] : []),
+    ...(canReturn ? [{ label: "Record Return", icon: RotateCcw, onClick: () => onReturn(deal) }] : []),
     ...(canDelete ? [{ label: "Delete", icon: Trash2, onClick: () => onDelete(deal), danger: true }] : []),
   ];
 

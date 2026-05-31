@@ -23,6 +23,7 @@ export default async function DealsPage({
         salesperson: { select: { id: true, fullName: true } },
         createdBy: { select: { id: true, fullName: true } },
         lead: { select: { id: true, title: true } },
+        returns: { select: { reversedProfit: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -51,7 +52,7 @@ export default async function DealsPage({
     : null;
 
   // Prisma Decimal isn't serializable across the RSC boundary — convert to numbers.
-  const serializedDeals = deals.map((d) => ({
+  const serializedDeals = deals.map(({ returns, ...d }) => ({
     ...d,
     salesTotal: Number(d.salesTotal),
     purchaseTotal: Number(d.purchaseTotal),
@@ -59,6 +60,7 @@ export default async function DealsPage({
     vatRatePercent: Number(d.vatRatePercent),
     vatAmount: Number(d.vatAmount),
     profit: Number(d.profit),
+    returnedTotal: returns.reduce((s, r) => s + Number(r.reversedProfit), 0),
   }));
 
   return (

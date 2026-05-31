@@ -11,11 +11,14 @@ import { Select } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { cn, formatSAR, formatDate } from "@/lib/utils";
 
+type CommissionType = "EARNING" | "CLAWBACK";
+
 interface CommissionRow {
   id: string;
   period: string;
+  type: CommissionType;
   percent: number;
-  amount: number;
+  amount: number; // negative for CLAWBACK
   payoutStatus: "PENDING" | "PAID";
   paidAt: Date | string | null;
   user: { id: string; fullName: string; role: "ADMIN" | "USER" };
@@ -43,12 +46,34 @@ export function CommissionsClient({ initialCommissions, isAdmin }: Props) {
     [commissions]
   );
 
+  // Cumulative carried balance per user across ALL periods (chronological),
+  // so a negative period offsets future periods.
+  const carried = useMemo(() => {
+    const periodsAsc = [...new Set(commissions.map((c) => c.period))].sort();
+    const byUserPeriod = new Map<string, Map<string, number>>();
+    for (const c of commissions) {
+      if (!byUserPeriod.has(c.user.id)) byUserPeriod.set(c.user.id, new Map());
+      const m = byUserPeriod.get(c.user.id)!;
+      m.set(c.period, (m.get(c.period) ?? 0) + c.amount);
+    }
+    const cumulative = new Map<string, Map<string, number>>();
+    for (const [uid, m] of byUserPeriod) {
+      const run = new Map<string, number>();
+      let acc = 0;
+      for (const p of periodsAsc) {
+        acc += m.get(p) ?? 0;
+        run.set(p, acc);
+      }
+      cumulative.set(uid, run);
+    }
+    return cumulative;
+  }, [commissions]);
+
   const visible = useMemo(
     () => (periodFilter ? commissions.filter((c) => c.period === periodFilter) : commissions),
     [commissions, periodFilter]
   );
 
-  // group by period → user
   const grouped = useMemo(() => {
     const byPeriod = new Map<string, CommissionRow[]>();
     for (const c of visible) {
@@ -72,7 +97,7 @@ export function CommissionsClient({ initialCommissions, isAdmin }: Props) {
       setCommissions((prev) =>
         prev.map((c) => (ids.includes(c.id) ? { ...c, payoutStatus: "PAID" as const, paidAt } : c))
       );
-      toast.success(`Marked ${ids.length} commission(s) as paid`);
+      toast.success(`Settled ${ids.length} commission line(s)`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Payout failed");
     } finally {
@@ -92,7 +117,7 @@ export function CommissionsClient({ initialCommissions, isAdmin }: Props) {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Commissions" description="Per-period commission statements — visible to everyone">
+      <PageHeader title="Commissions" description="Per-period statements — earnings and return clawbacks, visible to everyone">
         <Select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)} className="w-44 h-9">
           <option value="">All Periods</option>
           {periods.map((p) => <option key={p} value={p}>{periodLabel(p)}</option>)}
@@ -100,73 +125,79 @@ export function CommissionsClient({ initialCommissions, isAdmin }: Props) {
       </PageHeader>
 
       {grouped.map(([period, rows]) => {
-        const total = rows.reduce((s, r) => s + r.amount, 0);
+        const net = rows.reduce((s, r) => s + r.amount, 0);
         const pending = rows.filter((r) => r.payoutStatus === "PENDING");
-        const pendingTotal = pending.reduce((s, r) => s + r.amount, 0);
+        const pendingNet = pending.reduce((s, r) => s + r.amount, 0);
 
-        // per-user subtotals
-        const byUser = new Map<string, { name: string; role: string; pending: number; paid: number; ids: string[] }>();
+        const byUser = new Map<string, {
+          name: string; role: string; earnings: number; clawbacks: number; net: number; pendingIds: string[];
+        }>();
         for (const r of rows) {
-          if (!byUser.has(r.user.id)) byUser.set(r.user.id, { name: r.user.fullName, role: r.user.role, pending: 0, paid: 0, ids: [] });
+          if (!byUser.has(r.user.id))
+            byUser.set(r.user.id, { name: r.user.fullName, role: r.user.role, earnings: 0, clawbacks: 0, net: 0, pendingIds: [] });
           const e = byUser.get(r.user.id)!;
-          if (r.payoutStatus === "PAID") e.paid += r.amount;
-          else { e.pending += r.amount; e.ids.push(r.id); }
+          if (r.type === "CLAWBACK") e.clawbacks += r.amount; else e.earnings += r.amount;
+          e.net += r.amount;
+          if (r.payoutStatus === "PENDING") e.pendingIds.push(r.id);
         }
 
         return (
           <div key={period} className="rounded-xl border bg-card shadow-sm overflow-hidden">
-            {/* Period header */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
               <div>
                 <h3 className="font-semibold">{periodLabel(period)}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {rows.length} commission(s) · Total {formatSAR(total)} · Pending {formatSAR(pendingTotal)}
+                  {rows.length} line(s) · Net {formatSAR(net)} · Pending {formatSAR(pendingNet)}
                 </p>
               </div>
               {isAdmin && pending.length > 0 && (
-                <Button size="sm" variant="outline"
-                  onClick={() => payIds(pending.map((r) => r.id))}
-                  disabled={!!payingIds}>
+                <Button size="sm" variant="outline" onClick={() => payIds(pending.map((r) => r.id))} disabled={!!payingIds}>
                   {payingIds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                  Mark Period Paid
+                  Settle Period
                 </Button>
               )}
             </div>
 
-            {/* Per-user summary */}
+            {/* Per-user summary with carried balance */}
             <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
-              {[...byUser.entries()].map(([uid, u]) => (
-                <div key={uid} className="bg-card p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium flex items-center gap-1.5">
-                      <span className={cn("inline-block h-1.5 w-1.5 rounded-full", u.role === "ADMIN" ? "bg-purple-500" : "bg-primary")} />
-                      {u.name}
-                    </span>
-                    {isAdmin && u.pending > 0 && (
-                      <button onClick={() => payIds(u.ids)} disabled={!!payingIds}
-                        className="text-[11px] text-primary hover:underline disabled:opacity-50">
-                        Pay {formatSAR(u.pending)}
-                      </button>
-                    )}
+              {[...byUser.entries()].map(([uid, u]) => {
+                const balance = carried.get(uid)?.get(period) ?? u.net;
+                return (
+                  <div key={uid} className="bg-card p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium flex items-center gap-1.5">
+                        <span className={cn("inline-block h-1.5 w-1.5 rounded-full", u.role === "ADMIN" ? "bg-purple-500" : "bg-primary")} />
+                        {u.name}
+                      </span>
+                      {isAdmin && u.pendingIds.length > 0 && (
+                        <button onClick={() => payIds(u.pendingIds)} disabled={!!payingIds}
+                          className="text-[11px] text-primary hover:underline disabled:opacity-50">Settle</button>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+                      {u.earnings !== 0 && <span className="text-green-600 dark:text-green-400">Earned {formatSAR(u.earnings)}</span>}
+                      {u.clawbacks !== 0 && <span className="text-red-600 dark:text-red-400">Clawback {formatSAR(u.clawbacks)}</span>}
+                      <span className={cn("font-medium", u.net >= 0 ? "text-foreground" : "text-red-600 dark:text-red-400")}>
+                        Net {formatSAR(u.net)}
+                      </span>
+                    </div>
+                    <p className={cn("mt-0.5 text-[11px]", balance < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground")}>
+                      Balance to date: {formatSAR(balance)}{balance < 0 ? " (carried forward)" : ""}
+                    </p>
                   </div>
-                  <div className="mt-1 flex gap-3 text-xs">
-                    {u.pending > 0 && <span className="text-amber-600 dark:text-amber-400">Pending {formatSAR(u.pending)}</span>}
-                    {u.paid > 0 && <span className="text-green-600 dark:text-green-400">Paid {formatSAR(u.paid)}</span>}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Detail rows */}
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Deal</TableHead>
                   <TableHead className="hidden md:table-cell">Customer</TableHead>
                   <TableHead>User</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">Deal Profit</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead className="text-right">%</TableHead>
-                  <TableHead className="text-right">Commission</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
                   {isAdmin && <TableHead className="w-20" />}
                 </TableRow>
@@ -177,25 +208,28 @@ export function CommissionsClient({ initialCommissions, isAdmin }: Props) {
                     <TableCell className="font-mono text-xs">{r.deal.dealNumber}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{r.deal.customer.name}</TableCell>
                     <TableCell className="text-sm">{r.user.fullName}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-right font-mono text-sm text-muted-foreground">{formatSAR(r.deal.profit)}</TableCell>
+                    <TableCell>
+                      <Badge variant={r.type === "CLAWBACK" ? "destructive" : "secondary"}>
+                        {r.type === "CLAWBACK" ? "Clawback" : "Earning"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right font-mono text-sm">{r.percent.toFixed(1)}%</TableCell>
-                    <TableCell className="text-right font-mono text-sm font-medium">{formatSAR(r.amount)}</TableCell>
+                    <TableCell className={cn("text-right font-mono text-sm font-medium", r.amount < 0 && "text-red-600 dark:text-red-400")}>
+                      {formatSAR(r.amount)}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={r.payoutStatus === "PAID" ? "success" : "warning"}>
-                        {r.payoutStatus === "PAID" ? "Paid" : "Pending"}
+                        {r.payoutStatus === "PAID" ? "Settled" : "Pending"}
                       </Badge>
                     </TableCell>
                     {isAdmin && (
                       <TableCell>
-                        {r.payoutStatus === "PENDING" && (
+                        {r.payoutStatus === "PENDING" ? (
                           <button onClick={() => payIds([r.id])} disabled={!!payingIds}
-                            className="text-[11px] text-primary hover:underline disabled:opacity-50">
-                            Mark Paid
-                          </button>
-                        )}
-                        {r.payoutStatus === "PAID" && r.paidAt && (
+                            className="text-[11px] text-primary hover:underline disabled:opacity-50">Settle</button>
+                        ) : r.paidAt ? (
                           <span className="text-[10px] text-muted-foreground">{formatDate(r.paidAt)}</span>
-                        )}
+                        ) : null}
                       </TableCell>
                     )}
                   </TableRow>

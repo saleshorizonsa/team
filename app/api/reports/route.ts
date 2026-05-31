@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { authorize, AuthzError } from "@/lib/authz";
 import { computeReport, type ReportType } from "@/lib/reports";
 
-const VALID: ReportType[] = ["sales", "purchases", "profit", "vat", "commissions"];
+const VALID: ReportType[] = ["sales", "purchases", "profit", "vat", "commissions", "returns"];
 
 export async function GET(req: Request) {
   try {

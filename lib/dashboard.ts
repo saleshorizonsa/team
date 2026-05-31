@@ -12,6 +12,8 @@ export interface DashboardData {
   kpis: {
     totalSales: number;
     totalProfit: number;
+    totalReturns: number;
+    netProfit: number;
     totalVat: number;
     dealCount: number;
     totalCommissions: number;
@@ -67,8 +69,14 @@ export async function computeDashboard(
     count: statusMap.get(s) ?? 0,
   }));
 
-  // Commissions tied to the approved deals in range
+  // Returns recorded against the approved deals in range
   const dealIds = approved.map((d) => d.id);
+  const returnsAgg = dealIds.length
+    ? await db.return.aggregate({ where: { dealId: { in: dealIds } }, _sum: { reversedProfit: true } })
+    : { _sum: { reversedProfit: null } };
+  const totalReturns = Number(returnsAgg._sum.reversedProfit ?? 0);
+
+  // Commissions tied to the approved deals in range
   const commissions = dealIds.length
     ? await db.commission.findMany({
         where: { dealId: { in: dealIds } },
@@ -93,7 +101,9 @@ export async function computeDashboard(
 
   return {
     kpis: {
-      totalSales, totalProfit, totalVat,
+      totalSales, totalProfit, totalReturns,
+      netProfit: totalProfit - totalReturns,
+      totalVat,
       dealCount: approved.length,
       totalCommissions, pendingPayouts, myCommission,
     },

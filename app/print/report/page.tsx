@@ -13,9 +13,14 @@ const TITLES: Record<ReportType, string> = {
   profit: "Profit Report",
   vat: "VAT Report",
   commissions: "Commission Statement",
+  returns: "Returns Report",
 };
 
-const MONEY_COLS = new Set(["Sales Total", "Purchase Total", "Transportation", "Profit", "VAT Amount", "Amount"]);
+const MONEY_COLS = new Set([
+  "Sales Total", "Purchase Total", "Transportation", "Profit", "VAT Amount", "Amount",
+  "Gross Profit", "Net Profit", "Returns", "Returned Sales", "Cost Recovered",
+  "Return Costs", "Reversed Profit",
+]);
 
 export default async function PrintReportPage({
   searchParams,
