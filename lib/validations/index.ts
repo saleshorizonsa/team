@@ -82,3 +82,65 @@ export type DealInput = z.infer<typeof dealSchema>;
 export const rejectSchema = z.object({
   reason: z.string().min(1, "Rejection reason is required"),
 });
+
+// ─── Settings: commission rules ───────────────────────────────────────────────
+
+export const commissionRulesSchema = z
+  .object({
+    scheme: z.enum(["POOLED", "PER_DEAL"]),
+    ownerPercent: z.number().min(0).max(100),
+    salesPoolPercent: z.number().min(0).max(100),
+    shares: z.record(z.string(), z.number().min(0).max(100)),
+  })
+  .refine(
+    (d) => Math.round((d.ownerPercent + d.salesPoolPercent) * 100) / 100 === 100,
+    { message: "Owner % + Sales pool % must equal 100", path: ["ownerPercent"] }
+  )
+  .refine(
+    (d) => {
+      if (d.scheme !== "POOLED") return true;
+      const vals = Object.values(d.shares);
+      if (vals.length === 0) return true;
+      const sum = vals.reduce((a, b) => a + b, 0);
+      return Math.round(sum * 100) / 100 === 100;
+    },
+    { message: "User shares must sum to 100%", path: ["shares"] }
+  );
+
+export type CommissionRulesInput = z.infer<typeof commissionRulesSchema>;
+
+// ─── Settings: company info ───────────────────────────────────────────────────
+
+export const companySchema = z.object({
+  companyName: z.string().max(191).optional().or(z.literal("")),
+  companyVatNumber: z.string().max(50).optional().or(z.literal("")),
+  companyAddress: z.string().max(500).optional().or(z.literal("")),
+  defaultVatRate: z.number().min(0).max(100),
+});
+
+export type CompanyInput = z.infer<typeof companySchema>;
+
+// ─── User management ──────────────────────────────────────────────────────────
+
+export const userCreateSchema = z.object({
+  fullName: z.string().min(1, "Full name is required").max(191),
+  email: z.string().email("Invalid email").max(191),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  role: z.enum(["ADMIN", "USER"]),
+  commissionSharePercent: z.number().min(0).max(100).nullable().optional(),
+});
+
+export type UserCreateInput = z.infer<typeof userCreateSchema>;
+
+export const userUpdateSchema = z.object({
+  fullName: z.string().min(1, "Full name is required").max(191),
+  role: z.enum(["ADMIN", "USER"]),
+  commissionSharePercent: z.number().min(0).max(100).nullable().optional(),
+  isActive: z.boolean(),
+});
+
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+
+export const resetPasswordSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});

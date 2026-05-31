@@ -32,11 +32,11 @@ const navItems: NavItem[] = [
   { href: "/",             label: "Dashboard",   icon: LayoutDashboard },
   { href: "/leads",        label: "Leads",       icon: TrendingUp },
   { href: "/deals",        label: "Deals",       icon: Handshake },
-  { href: "/commissions",  label: "Commissions", icon: DollarSign,  phase: 3 },
+  { href: "/commissions",  label: "Commissions", icon: DollarSign },
   { href: "/customers",    label: "Customers",   icon: Users },
   { href: "/suppliers",    label: "Suppliers",   icon: Truck },
-  { href: "/audit",        label: "Audit Log",   icon: ScrollText,  phase: 4, adminOnly: true },
-  { href: "/settings",     label: "Settings",    icon: Settings,    phase: 4, adminOnly: true },
+  { href: "/audit",        label: "Audit Log",   icon: ScrollText,  phase: 5, adminOnly: true },
+  { href: "/settings",     label: "Settings",    icon: Settings,    adminOnly: true },
 ];
 
 export function Sidebar() {

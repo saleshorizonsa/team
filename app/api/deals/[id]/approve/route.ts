@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { authorize, AuthzError } from "@/lib/authz";
 import { logAudit } from "@/lib/audit";
+import { generateCommissionsForDeal } from "@/lib/commission-service";
 
 const INCLUDE = {
   customer: { select: { id: true, name: true } },
@@ -38,7 +39,8 @@ export async function PATCH(_req: Request, { params }: { params: Promise<{ id: s
       include: INCLUDE,
     });
 
-    // NOTE: commission generation happens in Phase 4 — not here.
+    // Generate commission rows from the current commission rules.
+    await generateCommissionsForDeal(id);
 
     await logAudit({
       userId: session!.user.id,

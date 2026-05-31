@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { authorize, AuthzError } from "@/lib/authz";
 import { logAudit } from "@/lib/audit";
 import { dealSchema } from "@/lib/validations";
+import { generateCommissionsForDeal } from "@/lib/commission-service";
 
 const INCLUDE = {
   customer: { select: { id: true, name: true } },
@@ -74,6 +75,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       },
       include: INCLUDE,
     });
+
+    // If an APPROVED deal was edited, its profit may have changed — recompute
+    // its PENDING commissions (no-op if any are already PAID).
+    if (updated.status === "APPROVED") {
+      await generateCommissionsForDeal(id);
+    }
 
     await logAudit({
       userId: session!.user.id,
