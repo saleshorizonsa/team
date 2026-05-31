@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Loader2, Search, FileDown, ArrowLeft } from "lucide-react";
+import { Loader2, Search, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -24,17 +24,6 @@ interface InvoiceListItem {
   importedAs: string | null;
 }
 
-interface Preview {
-  invoiceId: string;
-  invoiceNumber: string;
-  customerName: string;
-  date: string;
-  subTotal: number;
-  taxTotal: number;
-  total: number;
-  vatRatePercent: number;
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -47,13 +36,14 @@ export function ZohoImportDialog({ open, onClose, onImported, users }: Props) {
   const [q, setQ] = useState("");
   const [list, setList] = useState<InvoiceListItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<Preview | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [salespersonId, setSalespersonId] = useState("");
-  const [purchaseTotal, setPurchaseTotal] = useState("");
   const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState("");
 
   const search = useCallback(async () => {
     setLoading(true);
+    setSelected(new Set());
     try {
       const params = new URLSearchParams();
       if (status) params.set("status", status);
@@ -69,41 +59,43 @@ export function ZohoImportDialog({ open, onClose, onImported, users }: Props) {
     }
   }, [status, q]);
 
-  async function pick(inv: InvoiceListItem) {
-    if (inv.alreadyImported) { toast.error(`Already imported as ${inv.importedAs}`); return; }
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/zoho/invoices/${inv.invoiceId}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to load invoice");
-      setSelected(data.preview);
-      setSalespersonId("");
-      setPurchaseTotal("");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setLoading(false);
-    }
+  const selectable = list.filter((i) => !i.alreadyImported);
+  const allSelected = selectable.length > 0 && selectable.every((i) => selected.has(i.invoiceId));
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(selectable.map((i) => i.invoiceId)));
   }
 
-  async function doImport() {
-    if (!selected) return;
+  async function importSelected() {
     if (!salespersonId) { toast.error("Select a salesperson to credit"); return; }
+    if (selected.size === 0) { toast.error("Select at least one invoice"); return; }
     setImporting(true);
+    let ok = 0, fail = 0;
+    const ids = [...selected];
     try {
-      const res = await fetch("/api/zoho/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId: selected.invoiceId, salespersonId, purchaseTotal }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Import failed");
-      toast.success(`Imported as ${data.dealNumber} (DRAFT)`);
+      for (let i = 0; i < ids.length; i++) {
+        setProgress(`Importing ${i + 1} of ${ids.length}…`);
+        try {
+          const res = await fetch("/api/zoho/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ invoiceId: ids[i], salespersonId, purchaseTotal: "" }),
+          });
+          if (res.ok) ok++; else fail++;
+        } catch { fail++; }
+      }
+      toast.success(`Imported ${ok} deal(s)${fail ? `, ${fail} failed` : ""}`);
       onImported();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Import failed");
     } finally {
       setImporting(false);
+      setProgress("");
     }
   }
 
@@ -112,103 +104,100 @@ export function ZohoImportDialog({ open, onClose, onImported, users }: Props) {
       open={open}
       onClose={onClose}
       title="Import from Zoho Books"
-      description="Read-only. Pull a selected invoice into a new DRAFT deal."
+      description="Read-only. Select invoices to pull into new DRAFT deals. Amount shown is the invoice total; each deal uses the pre-tax subtotal, with VAT recorded separately."
       className="max-w-2xl"
     >
-      {!selected ? (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Status</Label>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 w-36">
-                <option value="">All</option>
-                <option value="sent">Sent</option>
-                <option value="paid">Paid</option>
-                <option value="overdue">Overdue</option>
-                <option value="draft">Draft</option>
-              </Select>
-            </div>
-            <div className="flex-1 min-w-[180px] space-y-1">
-              <Label className="text-xs">Search</Label>
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Invoice # or customer" />
-            </div>
-            <Button onClick={search} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Search
-            </Button>
+      <div className="space-y-4">
+        {/* Filters */}
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Status</Label>
+            <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 w-32">
+              <option value="">All</option>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </Select>
           </div>
+          <div className="flex-1 min-w-[160px] space-y-1">
+            <Label className="text-xs">Search</Label>
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Invoice # or customer"
+              onKeyDown={(e) => { if (e.key === "Enter") search(); }} />
+          </div>
+          <Button onClick={search} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Search
+          </Button>
+        </div>
 
-          <div className="rounded-lg border max-h-80 overflow-y-auto divide-y">
+        {/* List with checkboxes */}
+        <div className="rounded-lg border overflow-hidden">
+          {list.length > 0 && (
+            <div className="flex items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-medium">
+              <input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 rounded border-input" />
+              <span>Select all importable</span>
+              <span className="ml-auto text-muted-foreground">{selected.size} selected</span>
+            </div>
+          )}
+          <div className="max-h-72 overflow-y-auto divide-y">
             {list.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
                 {loading ? "Loading…" : "Search to list invoices from Zoho."}
               </p>
             ) : list.map((inv) => (
-              <button
+              <label
                 key={inv.invoiceId}
-                onClick={() => pick(inv)}
-                disabled={inv.alreadyImported}
                 className={cn(
-                  "flex w-full items-center justify-between px-3 py-2.5 text-left text-sm transition-colors",
-                  inv.alreadyImported ? "opacity-50 cursor-not-allowed" : "hover:bg-accent"
+                  "flex items-center gap-3 px-3 py-2.5 text-sm",
+                  inv.alreadyImported ? "opacity-50" : "cursor-pointer hover:bg-accent"
                 )}
               >
-                <div>
-                  <span className="font-mono text-xs font-medium">{inv.invoiceNumber}</span>
-                  <span className="text-muted-foreground"> · {inv.customerName}</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input shrink-0"
+                  disabled={inv.alreadyImported}
+                  checked={selected.has(inv.invoiceId)}
+                  onChange={() => toggle(inv.invoiceId)}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate">
+                    <span className="font-mono text-xs font-medium">{inv.invoiceNumber}</span>
+                    <span className="text-muted-foreground"> · {inv.customerName}</span>
+                  </div>
                   <p className="text-xs text-muted-foreground">{formatDate(inv.date)} · {inv.status}</p>
                 </div>
-                <div className="text-right">
-                  <div className="font-mono">{formatSAR(inv.subTotal)}</div>
+                <div className="text-right shrink-0">
+                  <div className="font-mono">{formatSAR(inv.total)}</div>
                   {inv.alreadyImported && <Badge variant="secondary" className="mt-0.5">Imported {inv.importedAs}</Badge>}
                 </div>
-              </button>
+              </label>
             ))}
           </div>
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={onClose}>Close</Button>
-          </div>
         </div>
-      ) : (
-        <div className="space-y-4">
-          <button onClick={() => setSelected(null)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to list
-          </button>
 
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Invoice</span><span className="font-mono">{selected.invoiceNumber}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Customer</span><span>{selected.customerName}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span>{formatDate(selected.date)}</span></div>
-            <div className="flex justify-between border-t pt-1.5"><span className="text-muted-foreground">Sales Total (pre-tax)</span><span className="font-mono font-medium">{formatSAR(selected.subTotal)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">VAT ({selected.vatRatePercent}%)</span><span className="font-mono">{formatSAR(selected.taxTotal)}</span></div>
+        {/* Bulk action footer */}
+        <div className="flex flex-wrap items-end justify-between gap-3 border-t pt-4">
+          <div className="space-y-1">
+            <Label htmlFor="bulk-sp" className="text-xs">Credit Salesperson *</Label>
+            <Select id="bulk-sp" value={salespersonId} onChange={(e) => setSalespersonId(e.target.value)} className="w-52">
+              <option value="">— Select —</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+            </Select>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="sp">Credit Salesperson *</Label>
-              <Select id="sp" value={salespersonId} onChange={(e) => setSalespersonId(e.target.value)}>
-                <option value="">— Select —</option>
-                {users.map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pt">Purchase Cost (manual)</Label>
-              <Input id="pt" inputMode="decimal" value={purchaseTotal} onChange={(e) => setPurchaseTotal(e.target.value)} placeholder="0.00" className="font-mono" />
-            </div>
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            Invoices carry the sales side only. Enter the purchase cost manually (or leave 0 and edit
-            the deal later). The deal is created as <strong>DRAFT</strong> and goes through normal approval.
-          </p>
-
-          <div className="flex justify-end gap-2 border-t pt-3">
-            <Button variant="outline" onClick={() => setSelected(null)} disabled={importing}>Cancel</Button>
-            <Button onClick={doImport} disabled={importing}>
+          <div className="flex items-center gap-2">
+            {progress && <span className="text-xs text-muted-foreground">{progress}</span>}
+            <Button variant="outline" onClick={onClose} disabled={importing}>Close</Button>
+            <Button onClick={importSelected} disabled={importing || selected.size === 0}>
               {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
-              Import as Deal
+              Import {selected.size || ""} as DRAFT
             </Button>
           </div>
         </div>
-      )}
+        <p className="text-[11px] text-muted-foreground">
+          Imported deals are created as <strong>DRAFT</strong> with purchase cost 0 — edit each deal to set the
+          purchase cost, then approve it to generate commissions on the net profit.
+        </p>
+      </div>
     </Dialog>
   );
 }
