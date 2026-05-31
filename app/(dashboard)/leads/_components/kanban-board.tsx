@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DndContext, DragEndEvent, DragOverlay, pointerWithin } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { useDroppable } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -77,14 +77,14 @@ export function KanbanBoard({ leads, onLeadsChange, canEditLead, onEdit, onDelet
   const [lostPending, setLostPending] = useState<{ lead: Lead } | null>(null);
   const [wonLead, setWonLead] = useState<Lead | null>(null);
 
-  function handleDragStart({ active }: { active: { id: string } }) {
-    setActiveLead(leads.find((l) => l.id === active.id) ?? null);
+  function handleDragStart({ active }: DragStartEvent) {
+    setActiveLead(leads.find((l) => l.id === String(active.id)) ?? null);
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveLead(null);
     if (!over) return;
-    const lead = leads.find((l) => l.id === active.id);
+    const lead = leads.find((l) => l.id === String(active.id));
     if (!lead) return;
     const newStage = over.id as LeadStage;
     if (newStage === lead.stage) return;
