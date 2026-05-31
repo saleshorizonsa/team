@@ -25,9 +25,15 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status") || undefined; // e.g. "paid", "sent"
+    // Zoho expects PascalCase filter values (Status.Sent, Status.OverDue, …)
+    const STATUS_MAP: Record<string, string> = {
+      sent: "Sent", paid: "Paid", overdue: "OverDue", draft: "Draft",
+      void: "Void", unpaid: "Unpaid", partiallypaid: "PartiallyPaid", viewed: "Viewed",
+    };
+    const filterBy = status ? `Status.${STATUS_MAP[status.toLowerCase()] ?? status}` : undefined;
     const data = await zohoApiGet<{ invoices: ZInvoice[] }>(conn, "/invoices", {
       organization_id: orgId,
-      ...(status ? { filter_by: `Status.${status}` } : {}),
+      ...(filterBy ? { filter_by: filterBy } : {}),
       customer_id: searchParams.get("customer_id") || undefined,
       date_start: searchParams.get("date_start") || undefined,
       date_end: searchParams.get("date_end") || undefined,
