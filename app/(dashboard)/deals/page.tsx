@@ -50,9 +50,20 @@ export default async function DealsPage({
     ? { leadId: sp.leadId, customerId: sp.customerId, salespersonId: sp.salespersonId }
     : null;
 
+  // Prisma Decimal isn't serializable across the RSC boundary — convert to numbers.
+  const serializedDeals = deals.map((d) => ({
+    ...d,
+    salesTotal: Number(d.salesTotal),
+    purchaseTotal: Number(d.purchaseTotal),
+    transportation: Number(d.transportation),
+    vatRatePercent: Number(d.vatRatePercent),
+    vatAmount: Number(d.vatAmount),
+    profit: Number(d.profit),
+  }));
+
   return (
     <DealsClient
-      initialDeals={deals as Parameters<typeof DealsClient>[0]["initialDeals"]}
+      initialDeals={serializedDeals}
       customers={customers}
       suppliers={suppliers}
       users={users.map((u) => ({ id: u.id, fullName: u.fullName }))}

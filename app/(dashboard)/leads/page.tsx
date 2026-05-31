@@ -28,9 +28,15 @@ export default async function LeadsPage() {
     }),
   ]);
 
+  // Prisma Decimal isn't serializable across the RSC boundary — convert to number.
+  const serializedLeads = leads.map((l) => ({
+    ...l,
+    estimatedValue: Number(l.estimatedValue),
+  }));
+
   return (
     <LeadsClient
-      initialLeads={leads as Parameters<typeof LeadsClient>[0]["initialLeads"]}
+      initialLeads={serializedLeads}
       customers={customers}
       users={users}
       sessionUserId={session!.user.id}

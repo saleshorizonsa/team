@@ -10,7 +10,7 @@ export interface Lead {
   email: string | null;
   source: LeadSource;
   stage: LeadStage;
-  estimatedValue: string | number;
+  estimatedValue: number;
   ownerId: string;
   notes: string | null;
   lostReason: string | null;

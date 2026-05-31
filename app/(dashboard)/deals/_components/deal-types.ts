@@ -7,12 +7,12 @@ export interface Deal {
   supplierId: string | null;
   salespersonId: string;
   leadId: string | null;
-  salesTotal: string | number;
-  purchaseTotal: string | number;
-  transportation: string | number;
-  vatRatePercent: string | number;
-  vatAmount: string | number;
-  profit: string | number;
+  salesTotal: number;
+  purchaseTotal: number;
+  transportation: number;
+  vatRatePercent: number;
+  vatAmount: number;
+  profit: number;
   status: DealStatus;
   approvedById: string | null;
   approvedAt: Date | string | null;
