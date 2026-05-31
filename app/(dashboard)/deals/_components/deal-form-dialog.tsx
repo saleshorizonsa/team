@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { dealSchema, type DealInput } from "@/lib/validations";
 import type { CommissionRules, CommissionParticipant } from "@/lib/commission";
 import { ProfitPreview } from "./profit-preview";
+import { formatSAR, formatDate } from "@/lib/utils";
 import type { Deal } from "./deal-types";
 
 export interface DealFormPrefill {
@@ -34,6 +35,16 @@ interface Props {
   rules: CommissionRules;
   participants: CommissionParticipant[];
   defaultVatRate: number;
+  isAdmin: boolean;
+}
+
+interface PurchaseOrder {
+  id: string;
+  number: string;
+  vendorName: string;
+  date: string;
+  total: number;
+  status: string;
 }
 
 function todayISO() {
@@ -42,9 +53,29 @@ function todayISO() {
 
 export function DealFormDialog({
   open, onClose, onSaved, initial, prefill,
-  customers, suppliers, users, rules, participants, defaultVatRate,
+  customers, suppliers, users, rules, participants, defaultVatRate, isAdmin,
 }: Props) {
   const isEdit = !!initial;
+
+  // Zoho Purchase Order picker (admin) — fills purchaseTotal
+  const [poOpen, setPoOpen] = useState(false);
+  const [poList, setPoList] = useState<PurchaseOrder[]>([]);
+  const [poLoading, setPoLoading] = useState(false);
+  const [poSearch, setPoSearch] = useState("");
+
+  async function loadPOs() {
+    setPoLoading(true);
+    try {
+      const res = await fetch(`/api/zoho/purchaseorders?q=${encodeURIComponent(poSearch)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load purchase orders");
+      setPoList(data.purchaseOrders);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setPoLoading(false);
+    }
+  }
 
   const {
     register, handleSubmit, reset, control, setValue,
@@ -53,6 +84,7 @@ export function DealFormDialog({
 
   useEffect(() => {
     if (open) {
+      setPoOpen(false); setPoList([]); setPoSearch("");
       const initialReps =
         initial?.creditedUserIds && initial.creditedUserIds.length
           ? initial.creditedUserIds
@@ -169,7 +201,15 @@ export function DealFormDialog({
                 {errors.salesTotal && <p className="text-xs text-destructive">{errors.salesTotal.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="purchaseTotal">Purchase Total *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="purchaseTotal">Purchase Total *</Label>
+                  {isAdmin && (
+                    <button type="button" onClick={() => { setPoOpen((o) => !o); if (!poOpen && poList.length === 0) loadPOs(); }}
+                      className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline">
+                      <FileText className="h-3 w-3" /> Pick from PO
+                    </button>
+                  )}
+                </div>
                 <Input id="purchaseTotal" inputMode="decimal" {...register("purchaseTotal")} placeholder="0.00" className="font-mono" />
                 {errors.purchaseTotal && <p className="text-xs text-destructive">{errors.purchaseTotal.message}</p>}
               </div>
@@ -183,6 +223,36 @@ export function DealFormDialog({
                 {errors.vatRatePercent && <p className="text-xs text-destructive">{errors.vatRatePercent.message}</p>}
               </div>
             </div>
+
+            {/* Zoho Purchase Order picker */}
+            {isAdmin && poOpen && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input value={poSearch} onChange={(e) => setPoSearch(e.target.value)} placeholder="Search PO # or vendor"
+                    className="h-8" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); loadPOs(); } }} />
+                  <Button type="button" size="sm" variant="outline" onClick={loadPOs} disabled={poLoading}>
+                    {poLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+                <div className="max-h-40 overflow-y-auto rounded-md border bg-background divide-y">
+                  {poList.length === 0 ? (
+                    <p className="py-4 text-center text-xs text-muted-foreground">{poLoading ? "Loading…" : "No purchase orders found."}</p>
+                  ) : poList.map((po) => (
+                    <button key={po.id} type="button"
+                      onClick={() => { setValue("purchaseTotal", String(po.total), { shouldValidate: true }); setPoOpen(false); toast.success(`Purchase cost set from ${po.number}`); }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent">
+                      <span>
+                        <span className="font-mono text-xs">{po.number}</span>
+                        <span className="text-muted-foreground"> · {po.vendorName}</span>
+                        <span className="block text-[11px] text-muted-foreground">{formatDate(po.date)} · {po.status}</span>
+                      </span>
+                      <span className="font-mono">{formatSAR(po.total)}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">Selecting a PO fills the purchase cost. You can still edit it.</p>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="notes">Notes</Label>

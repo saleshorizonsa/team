@@ -273,6 +273,7 @@ export function DealsClient({
         rules={rules}
         participants={participants}
         defaultVatRate={defaultVatRate}
+        isAdmin={isAdmin}
       />
 
       <DealDetailDialog open={!!viewing} onClose={() => setViewing(null)} deal={viewing} />

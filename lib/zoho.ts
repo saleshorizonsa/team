@@ -7,6 +7,7 @@ export const ZOHO_SCOPES = [
   "ZohoBooks.contacts.READ",
   "ZohoBooks.settings.READ",
   "ZohoBooks.bills.READ",
+  "ZohoBooks.purchaseorders.READ",
 ];
 
 // Accounts server where the OAuth CLIENT is registered. A client created in a
