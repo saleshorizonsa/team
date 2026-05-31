@@ -60,6 +60,7 @@ export default async function DealsPage({
     vatRatePercent: Number(d.vatRatePercent),
     vatAmount: Number(d.vatAmount),
     profit: Number(d.profit),
+    creditedUserIds: Array.isArray(d.creditedUserIds) ? (d.creditedUserIds as string[]) : null,
     returnedTotal: returns.reduce((s, r) => s + Number(r.reversedProfit), 0),
   }));
 

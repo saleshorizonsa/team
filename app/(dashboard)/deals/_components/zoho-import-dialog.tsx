@@ -37,7 +37,7 @@ export function ZohoImportDialog({ open, onClose, onImported, users }: Props) {
   const [list, setList] = useState<InvoiceListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [salespersonId, setSalespersonId] = useState("");
+  const [salespersonIds, setSalespersonIds] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState("");
 
@@ -74,7 +74,7 @@ export function ZohoImportDialog({ open, onClose, onImported, users }: Props) {
   }
 
   async function importSelected() {
-    if (!salespersonId) { toast.error("Select a salesperson to credit"); return; }
+    if (salespersonIds.length === 0) { toast.error("Select at least one salesperson to credit"); return; }
     if (selected.size === 0) { toast.error("Select at least one invoice"); return; }
     setImporting(true);
     let ok = 0, fail = 0;
@@ -86,7 +86,7 @@ export function ZohoImportDialog({ open, onClose, onImported, users }: Props) {
           const res = await fetch("/api/zoho/import", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ invoiceId: ids[i], salespersonId, purchaseTotal: "" }),
+            body: JSON.stringify({ invoiceId: ids[i], salespersonIds, purchaseTotal: "" }),
           });
           if (res.ok) ok++; else fail++;
         } catch { fail++; }
@@ -176,15 +176,27 @@ export function ZohoImportDialog({ open, onClose, onImported, users }: Props) {
         </div>
 
         {/* Bulk action footer */}
-        <div className="flex flex-wrap items-end justify-between gap-3 border-t pt-4">
-          <div className="space-y-1">
-            <Label htmlFor="bulk-sp" className="text-xs">Credit Salesperson *</Label>
-            <Select id="bulk-sp" value={salespersonId} onChange={(e) => setSalespersonId(e.target.value)} className="w-52">
-              <option value="">— Select —</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-            </Select>
+        <div className="space-y-2 border-t pt-4">
+          <Label className="text-xs">Credit Salespeople * <span className="font-normal text-muted-foreground">(share the pool equally)</span></Label>
+          <div className="flex flex-wrap gap-2">
+            {users.map((u) => {
+              const checked = salespersonIds.includes(u.id);
+              return (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => setSalespersonIds((prev) => checked ? prev.filter((x) => x !== u.id) : [...prev, u.id])}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs transition-colors",
+                    checked ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent"
+                  )}
+                >
+                  {u.fullName}
+                </button>
+              );
+            })}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2 pt-1">
             {progress && <span className="text-xs text-muted-foreground">{progress}</span>}
             <Button variant="outline" onClick={onClose} disabled={importing}>Close</Button>
             <Button onClick={importSelected} disabled={importing || selected.size === 0}>

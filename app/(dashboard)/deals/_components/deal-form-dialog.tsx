@@ -47,16 +47,24 @@ export function DealFormDialog({
   const isEdit = !!initial;
 
   const {
-    register, handleSubmit, reset, control,
+    register, handleSubmit, reset, control, setValue,
     formState: { errors, isSubmitting },
   } = useForm<DealInput>({ resolver: zodResolver(dealSchema) });
 
   useEffect(() => {
     if (open) {
+      const initialReps =
+        initial?.creditedUserIds && initial.creditedUserIds.length
+          ? initial.creditedUserIds
+          : initial?.salespersonId
+          ? [initial.salespersonId]
+          : prefill?.salespersonId
+          ? [prefill.salespersonId]
+          : [];
       reset({
         customerId: initial?.customerId ?? prefill?.customerId ?? "",
         supplierId: initial?.supplierId ?? "",
-        salespersonId: initial?.salespersonId ?? prefill?.salespersonId ?? "",
+        salespersonIds: initialReps,
         leadId: initial?.leadId ?? prefill?.leadId ?? "",
         dealDate: initial?.dealDate
           ? new Date(initial.dealDate).toISOString().slice(0, 10)
@@ -72,6 +80,7 @@ export function DealFormDialog({
 
   // Live values for the preview
   const watched = useWatch({ control });
+  const selectedReps = (watched.salespersonIds as string[] | undefined) ?? [];
 
   async function onSubmit(data: DealInput) {
     try {
@@ -119,12 +128,32 @@ export function DealFormDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="salespersonId">Salesperson *</Label>
-              <Select id="salespersonId" {...register("salespersonId")}>
-                <option value="">— Select salesperson —</option>
-                {users.map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-              </Select>
-              {errors.salespersonId && <p className="text-xs text-destructive">{errors.salespersonId.message}</p>}
+              <Label>Salespeople * <span className="font-normal text-muted-foreground">(share the pool equally)</span></Label>
+              <div className="rounded-md border divide-y max-h-40 overflow-y-auto">
+                {users.map((u) => {
+                  const checked = selectedReps.includes(u.id);
+                  return (
+                    <label key={u.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-accent">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-input shrink-0"
+                        checked={checked}
+                        onChange={() => {
+                          const next = checked ? selectedReps.filter((x) => x !== u.id) : [...selectedReps, u.id];
+                          setValue("salespersonIds", next, { shouldValidate: true });
+                        }}
+                      />
+                      {u.fullName}
+                    </label>
+                  );
+                })}
+              </div>
+              {errors.salespersonIds && <p className="text-xs text-destructive">{errors.salespersonIds.message as string}</p>}
+              {selectedReps.length > 1 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Sales pool split equally: {(rules.salesPoolPercent / selectedReps.length).toFixed(1)}% of profit each
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -168,7 +197,7 @@ export function DealFormDialog({
               purchaseTotal={watched.purchaseTotal ?? ""}
               transportation={watched.transportation ?? "0"}
               vatRatePercent={watched.vatRatePercent ?? String(defaultVatRate)}
-              salespersonId={watched.salespersonId ?? ""}
+              creditedUserIds={selectedReps}
               rules={rules}
               participants={participants}
             />

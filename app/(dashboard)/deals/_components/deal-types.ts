@@ -21,6 +21,7 @@ export interface Deal {
   dealDate: Date | string;
   createdById: string;
   createdAt: Date | string;
+  creditedUserIds: string[] | null; // salespeople sharing the pool (equal split)
   returnedTotal: number; // Σ reversedProfit across returns (net = profit − this)
   customer: { id: string; name: string };
   supplier: { id: string; name: string } | null;

@@ -10,7 +10,7 @@ import { z } from "zod";
 
 const importSchema = z.object({
   invoiceId: z.string().min(1),
-  salespersonId: z.string().min(1, "Salesperson is required"),
+  salespersonIds: z.array(z.string().min(1)).min(1, "Select at least one salesperson"),
   purchaseTotal: z.string().optional(), // manual entry or from a Bill
 });
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const orgId = await ensureOrganizationId(conn);
 
     const body = await req.json();
-    const { invoiceId, salespersonId, purchaseTotal } = importSchema.parse(body);
+    const { invoiceId, salespersonIds, purchaseTotal } = importSchema.parse(body);
 
     // Idempotency: block double import
     const existing = await db.deal.findUnique({ where: { zohoInvoiceId: invoiceId } });
@@ -60,7 +60,8 @@ export async function POST(req: Request) {
       data: {
         dealNumber,
         customerId: customer.id,
-        salespersonId,
+        salespersonId: salespersonIds[0],
+        creditedUserIds: salespersonIds,
         salesTotal: new Prisma.Decimal(salesTotal.toFixed(2)),
         purchaseTotal: new Prisma.Decimal(pt.toFixed(2)),
         transportation: new Prisma.Decimal(0),

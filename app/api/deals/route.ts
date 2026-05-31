@@ -68,13 +68,15 @@ export async function POST(req: Request) {
     const vatAmount = st * vr / 100;
 
     const dealNumber = await generateDealNumber();
+    const creditedUserIds = data.salespersonIds;
 
     const deal = await db.deal.create({
       data: {
         dealNumber,
         customerId: data.customerId,
         supplierId: data.supplierId || null,
-        salespersonId: data.salespersonId,
+        salespersonId: creditedUserIds[0], // primary (first) for display/filter
+        creditedUserIds,
         leadId: data.leadId || null,
         dealDate: new Date(data.dealDate),
         salesTotal: st,

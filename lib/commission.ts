@@ -27,17 +27,19 @@ interface ComputeArgs {
   profit: number;
   rules: CommissionRules;
   participants: CommissionParticipant[]; // active users (admins + users)
-  salespersonId: string;                 // credited salesperson (for PER_DEAL)
+  creditedUserIds: string[];             // salespeople sharing the pool (equal split)
 }
 
 /**
- * Returns the commission breakdown for a deal's profit.
- * Negative or zero profit yields zero-amount lines (still shown for transparency).
+ * Commission breakdown for a deal's profit:
+ *  - the owner (ADMIN) pool gets ownerPercent, split evenly among admins
+ *  - the sales pool (salesPoolPercent) is split EQUALLY among the deal's
+ *    credited salespeople (creditedUserIds)
+ * Negative/zero profit yields zero-amount lines (still shown for transparency).
  */
-export function computeCommissions({ profit, rules, participants, salespersonId }: ComputeArgs): CommissionLine[] {
+export function computeCommissions({ profit, rules, participants, creditedUserIds }: ComputeArgs): CommissionLine[] {
   const lines: CommissionLine[] = [];
   const admins = participants.filter((p) => p.role === "ADMIN");
-  const users = participants.filter((p) => p.role === "USER");
   const safeProfit = isFinite(profit) ? profit : 0;
 
   // Owner (ADMIN) portion — owner pool split evenly among admins (usually one).
@@ -52,38 +54,19 @@ export function computeCommissions({ profit, rules, participants, salespersonId 
     });
   }
 
-  if (rules.scheme === "PER_DEAL") {
-    // The credited salesperson takes the whole sales-pool percentage.
-    const sp = users.find((u) => u.userId === salespersonId);
-    if (sp) {
-      lines.push({
-        userId: sp.userId,
-        fullName: sp.fullName,
-        role: "USER",
-        percentOfProfit: rules.salesPoolPercent,
-        amount: (safeProfit * rules.salesPoolPercent) / 100,
-      });
-    }
-  } else {
-    // POOLED: sales pool split among USERs by their share %.
-    // If no shares configured, split evenly.
-    const totalShares = users.reduce((s, u) => s + (rules.shares[u.userId] ?? 0), 0);
-    for (const u of users) {
-      const sharePct =
-        totalShares > 0
-          ? (rules.shares[u.userId] ?? 0) / totalShares
-          : users.length
-          ? 1 / users.length
-          : 0;
-      const pctOfProfit = rules.salesPoolPercent * sharePct;
-      lines.push({
-        userId: u.userId,
-        fullName: u.fullName,
-        role: "USER",
-        percentOfProfit: pctOfProfit,
-        amount: (safeProfit * pctOfProfit) / 100,
-      });
-    }
+  // Sales pool — split equally among the deal's credited salespeople.
+  const reps = creditedUserIds
+    .map((id) => participants.find((p) => p.userId === id))
+    .filter((p): p is CommissionParticipant => !!p);
+  const poolPctEach = reps.length ? rules.salesPoolPercent / reps.length : 0;
+  for (const r of reps) {
+    lines.push({
+      userId: r.userId,
+      fullName: r.fullName,
+      role: r.role,
+      percentOfProfit: poolPctEach,
+      amount: (safeProfit * poolPctEach) / 100,
+    });
   }
 
   return lines;

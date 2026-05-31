@@ -178,6 +178,7 @@ model Deal {
   source            DealSource @default(MANUAL)
   zohoInvoiceId     String?    @unique
   zohoInvoiceNumber String?
+  creditedUserIds   Json?      // userIds sharing the sales pool (equal split); falls back to [salespersonId]
   createdById    String
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt

@@ -56,7 +56,7 @@ export async function generateCommissionsForDeal(
     profit: netProfit,
     rules: r,
     participants,
-    salespersonId: deal.salespersonId,
+    creditedUserIds: creditedIdsOf(deal.creditedUserIds, deal.salespersonId),
   });
   const period = periodOf(new Date(deal.dealDate));
 
@@ -78,6 +78,14 @@ export async function generateCommissionsForDeal(
       })
     ),
   ]);
+}
+
+/** Credited salespeople for a deal — JSON array if set, else [salespersonId]. */
+export function creditedIdsOf(creditedUserIds: unknown, salespersonId: string): string[] {
+  if (Array.isArray(creditedUserIds) && creditedUserIds.length > 0) {
+    return creditedUserIds.filter((x): x is string => typeof x === "string");
+  }
+  return [salespersonId];
 }
 
 /** Sum of reversedProfit across all returns recorded against a deal. */
@@ -145,7 +153,7 @@ export async function previewRecompute(
   // after — simulate EARNING on NET profit for approved deals without paid earnings
   const deals = await db.deal.findMany({
     where: { status: "APPROVED", deletedAt: null },
-    select: { id: true, profit: true, dealDate: true, salespersonId: true },
+    select: { id: true, profit: true, dealDate: true, salespersonId: true, creditedUserIds: true },
   });
   const after = new Map<string, number>();
   let affectedDeals = 0;
@@ -160,7 +168,7 @@ export async function previewRecompute(
       profit: netProfit,
       rules: newRules,
       participants,
-      salespersonId: d.salespersonId,
+      creditedUserIds: creditedIdsOf(d.creditedUserIds, d.salespersonId),
     });
     for (const l of lines) {
       after.set(l.userId, (after.get(l.userId) ?? 0) + l.amount);

@@ -10,7 +10,7 @@ interface Props {
   purchaseTotal: string;
   transportation: string;
   vatRatePercent: string;
-  salespersonId: string;
+  creditedUserIds: string[];
   rules: CommissionRules;
   participants: CommissionParticipant[];
 }
@@ -21,7 +21,7 @@ function num(v: string): number {
 }
 
 export function ProfitPreview({
-  salesTotal, purchaseTotal, transportation, vatRatePercent, salespersonId, rules, participants,
+  salesTotal, purchaseTotal, transportation, vatRatePercent, creditedUserIds, rules, participants,
 }: Props) {
   const st = num(salesTotal);
   const pt = num(purchaseTotal);
@@ -31,9 +31,10 @@ export function ProfitPreview({
   const profit = st - pt - tr;
   const vatAmount = (st * vr) / 100;
 
+  const repsKey = creditedUserIds.join(",");
   const lines = useMemo(
-    () => computeCommissions({ profit, rules, participants, salespersonId }),
-    [profit, rules, participants, salespersonId]
+    () => computeCommissions({ profit, rules, participants, creditedUserIds }),
+    [profit, rules, participants, repsKey] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const profitPositive = profit >= 0;

@@ -147,7 +147,15 @@ export function DealsClient({
       id: "salesperson",
       header: "Salesperson",
       accessorFn: (d) => d.salesperson.fullName,
-      cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.salesperson.fullName}</span>,
+      cell: ({ row }) => {
+        const extra = (row.original.creditedUserIds?.length ?? 1) - 1;
+        return (
+          <span className="text-sm text-muted-foreground">
+            {row.original.salesperson.fullName}
+            {extra > 0 && <span className="ml-1 text-[10px] text-primary">+{extra}</span>}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "salesTotal",

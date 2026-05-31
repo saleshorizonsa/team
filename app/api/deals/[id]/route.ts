@@ -63,7 +63,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data: {
         customerId: data.customerId,
         supplierId: data.supplierId || null,
-        salespersonId: data.salespersonId,
+        salespersonId: data.salespersonIds[0],
+        creditedUserIds: data.salespersonIds,
         dealDate: new Date(data.dealDate),
         salesTotal: st,
         purchaseTotal: pt,

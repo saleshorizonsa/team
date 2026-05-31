@@ -59,7 +59,7 @@ const moneyField = (label: string) =>
 export const dealSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   supplierId: z.string().optional().or(z.literal("")),
-  salespersonId: z.string().min(1, "Salesperson is required"),
+  salespersonIds: z.array(z.string().min(1)).min(1, "Select at least one salesperson"),
   leadId: z.string().optional().or(z.literal("")),
   dealDate: z.string().min(1, "Deal date is required"),
   salesTotal: moneyField("Sales total"),
