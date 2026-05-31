@@ -9,6 +9,11 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development",
   workboxOptions: {
     disableDevLogs: true,
+    // On each new deploy: take over immediately and drop stale precaches so
+    // clients never serve old HTML pointing at chunk hashes that no longer exist.
+    skipWaiting: true,
+    clientsClaim: true,
+    cleanupOutdatedCaches: true,
   },
 });
 
