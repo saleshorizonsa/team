@@ -57,12 +57,11 @@ export function CustomersClient({ initialCustomers, sessionUserId, isAdmin }: Pr
   function openCreate() { setEditing(null); setDialogOpen(true); }
   function openEdit(c: Customer) { setEditing(c); setDialogOpen(true); }
 
-  function onSaved(saved: Customer) {
+  function onSaved(saved: Record<string, unknown>) {
+    const c = saved as Customer;
     setCustomers((prev) => {
-      const idx = prev.findIndex((c) => c.id === saved.id);
-      return idx >= 0
-        ? prev.map((c) => (c.id === saved.id ? saved : c))
-        : [saved, ...prev];
+      const idx = prev.findIndex((x) => x.id === c.id);
+      return idx >= 0 ? prev.map((x) => (x.id === c.id ? c : x)) : [c, ...prev];
     });
     setDialogOpen(false);
   }
