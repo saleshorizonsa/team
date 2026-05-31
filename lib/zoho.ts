@@ -9,9 +9,12 @@ export const ZOHO_SCOPES = [
   "ZohoBooks.bills.READ",
 ];
 
-// Entry accounts server. Zoho appends `location` + `accounts-server` to the
-// callback so we can detect the user's data center (never hardcode it).
-const ENTRY_ACCOUNTS = "https://accounts.zoho.com";
+// Accounts server where the OAuth CLIENT is registered. A client created in a
+// specific data center (e.g. api-console.zoho.sa) only exists there, so the
+// authorize/token calls must target that DC's accounts server. Configurable via
+// ZOHO_ACCOUNTS_DOMAIN (default .com). The *API* domain is still auto-detected
+// from the token response (api_domain) for all Books data calls.
+const ENTRY_ACCOUNTS = (process.env.ZOHO_ACCOUNTS_DOMAIN || "https://accounts.zoho.com").replace(/\/+$/, "");
 
 interface TokenResponse {
   access_token?: string;

@@ -17,9 +17,12 @@ export async function GET(req: Request) {
     if (error) return Response.redirect(`${appUrl}/settings?zoho=error`);
     if (!code) return Response.redirect(`${appUrl}/settings?zoho=missing_code`);
 
-    // Data-center detection: prefer the explicit accounts-server param.
+    // Data-center detection: prefer the explicit accounts-server param Zoho
+    // appends; otherwise fall back to the configured accounts domain.
     const accountsServer =
-      searchParams.get("accounts-server") || "https://accounts.zoho.com";
+      searchParams.get("accounts-server") ||
+      process.env.ZOHO_ACCOUNTS_DOMAIN ||
+      "https://accounts.zoho.com";
 
     const tokens = await exchangeCodeForTokens(code, accountsServer);
     if (!tokens.access_token || !tokens.refresh_token) {
