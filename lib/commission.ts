@@ -33,8 +33,10 @@ interface ComputeArgs {
 /**
  * Commission breakdown for a deal's profit:
  *  - the owner (ADMIN) pool gets ownerPercent, split evenly among admins
- *  - the sales pool (salesPoolPercent) is split EQUALLY among the deal's
- *    credited salespeople (creditedUserIds)
+ *  - the sales pool (salesPoolPercent) is split among the deal's credited
+ *    salespeople (creditedUserIds) WEIGHTED by each one's configured share %
+ *    (rules.shares), renormalised across just the selected reps. If none of the
+ *    selected reps have a share configured, it falls back to an equal split.
  * Negative/zero profit yields zero-amount lines (still shown for transparency).
  */
 export function computeCommissions({ profit, rules, participants, creditedUserIds }: ComputeArgs): CommissionLine[] {
@@ -54,18 +56,21 @@ export function computeCommissions({ profit, rules, participants, creditedUserId
     });
   }
 
-  // Sales pool — split equally among the deal's credited salespeople.
+  // Sales pool — split among credited reps weighted by their share %.
   const reps = creditedUserIds
     .map((id) => participants.find((p) => p.userId === id))
     .filter((p): p is CommissionParticipant => !!p);
-  const poolPctEach = reps.length ? rules.salesPoolPercent / reps.length : 0;
-  for (const r of reps) {
+  const weights = reps.map((r) => rules.shares[r.userId] ?? 0);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < reps.length; i++) {
+    const frac = totalWeight > 0 ? weights[i] / totalWeight : reps.length ? 1 / reps.length : 0;
+    const pct = rules.salesPoolPercent * frac;
     lines.push({
-      userId: r.userId,
-      fullName: r.fullName,
-      role: r.role,
-      percentOfProfit: poolPctEach,
-      amount: (safeProfit * poolPctEach) / 100,
+      userId: reps[i].userId,
+      fullName: reps[i].fullName,
+      role: reps[i].role,
+      percentOfProfit: pct,
+      amount: (safeProfit * pct) / 100,
     });
   }
 

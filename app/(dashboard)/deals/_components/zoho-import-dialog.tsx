@@ -177,7 +177,7 @@ export function ZohoImportDialog({ open, onClose, onImported, users }: Props) {
 
         {/* Bulk action footer */}
         <div className="space-y-2 border-t pt-4">
-          <Label className="text-xs">Credit Salespeople * <span className="font-normal text-muted-foreground">(share the pool equally)</span></Label>
+          <Label className="text-xs">Credit Salespeople * <span className="font-normal text-muted-foreground">(share the pool by their %)</span></Label>
           <div className="flex flex-wrap gap-2">
             {users.map((u) => {
               const checked = salespersonIds.includes(u.id);

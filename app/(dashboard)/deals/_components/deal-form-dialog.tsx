@@ -128,7 +128,7 @@ export function DealFormDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Salespeople * <span className="font-normal text-muted-foreground">(share the pool equally)</span></Label>
+              <Label>Salespeople * <span className="font-normal text-muted-foreground">(share the pool by their %)</span></Label>
               <div className="rounded-md border divide-y max-h-40 overflow-y-auto">
                 {users.map((u) => {
                   const checked = selectedReps.includes(u.id);
@@ -151,7 +151,7 @@ export function DealFormDialog({
               {errors.salespersonIds && <p className="text-xs text-destructive">{errors.salespersonIds.message as string}</p>}
               {selectedReps.length > 1 && (
                 <p className="text-[11px] text-muted-foreground">
-                  Sales pool split equally: {(rules.salesPoolPercent / selectedReps.length).toFixed(1)}% of profit each
+                  Sales pool split by each rep&apos;s share % (Settings → Commission Rules) — see the breakdown below.
                 </p>
               )}
             </div>
