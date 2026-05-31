@@ -1,16 +1,28 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Trophy } from "lucide-react";
+import { Trophy, ArrowRight } from "lucide-react";
+import type { Lead } from "./lead-types";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  leadTitle: string;
+  lead: Lead | null;
 }
 
-export function WonDialog({ open, onClose, leadTitle }: Props) {
+export function WonDialog({ open, onClose, lead }: Props) {
+  const router = useRouter();
+
+  function convert() {
+    if (!lead) return;
+    const params = new URLSearchParams({ leadId: lead.id });
+    if (lead.customerId) params.set("customerId", lead.customerId);
+    if (lead.ownerId) params.set("salespersonId", lead.ownerId);
+    router.push(`/deals?${params.toString()}`);
+  }
+
   return (
     <Dialog open={open} onClose={onClose} title="Lead Won! 🎉" className="max-w-md">
       <div className="space-y-4">
@@ -18,15 +30,19 @@ export function WonDialog({ open, onClose, leadTitle }: Props) {
           <Trophy className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-medium text-green-800 dark:text-green-300">
-              &ldquo;{leadTitle}&rdquo; marked as WON
+              &ldquo;{lead?.title}&rdquo; marked as WON
             </p>
             <p className="mt-1 text-sm text-green-700 dark:text-green-400">
-              Converting to a Deal will be available in Phase 3. The lead stage has been updated.
+              Convert this lead into a deal — the customer and salesperson will be pre-filled and the records linked together.
             </p>
           </div>
         </div>
-        <div className="flex justify-end">
-          <Button onClick={onClose}>Got it</Button>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Later</Button>
+          <Button onClick={convert}>
+            Convert to Deal
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </Dialog>

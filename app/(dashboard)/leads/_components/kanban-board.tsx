@@ -170,7 +170,7 @@ export function KanbanBoard({ leads, onLeadsChange, canEditLead, onEdit, onDelet
       <WonDialog
         open={!!wonLead}
         onClose={() => setWonLead(null)}
-        leadTitle={wonLead?.title ?? ""}
+        lead={wonLead}
       />
     </>
   );

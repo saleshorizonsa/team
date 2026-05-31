@@ -31,7 +31,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/",             label: "Dashboard",   icon: LayoutDashboard },
   { href: "/leads",        label: "Leads",       icon: TrendingUp },
-  { href: "/deals",        label: "Deals",       icon: Handshake,   phase: 3 },
+  { href: "/deals",        label: "Deals",       icon: Handshake },
   { href: "/commissions",  label: "Commissions", icon: DollarSign,  phase: 3 },
   { href: "/customers",    label: "Customers",   icon: Users },
   { href: "/suppliers",    label: "Suppliers",   icon: Truck },

@@ -158,6 +158,7 @@ model Deal {
   status         DealStatus @default(DRAFT)
   approvedById   String?
   approvedAt     DateTime?
+  rejectReason   String?    @db.Text
   notes          String?    @db.Text
   dealDate       DateTime
   createdById    String

@@ -48,3 +48,37 @@ export const stageChangeSchema = z.object({
   stage: z.enum(leadStages),
   lostReason: z.string().optional(),
 });
+
+// ─── Deal ─────────────────────────────────────────────────────────────────────
+
+const moneyField = (label: string) =>
+  z
+    .string()
+    .refine((v) => v !== "" && !isNaN(parseFloat(v)) && parseFloat(v) >= 0, `${label} must be a valid amount`);
+
+export const dealSchema = z.object({
+  customerId: z.string().min(1, "Customer is required"),
+  supplierId: z.string().optional().or(z.literal("")),
+  salespersonId: z.string().min(1, "Salesperson is required"),
+  leadId: z.string().optional().or(z.literal("")),
+  dealDate: z.string().min(1, "Deal date is required"),
+  salesTotal: moneyField("Sales total"),
+  purchaseTotal: moneyField("Purchase total"),
+  transportation: z
+    .string()
+    .refine((v) => v === "" || (!isNaN(parseFloat(v)) && parseFloat(v) >= 0), "Invalid amount")
+    .optional(),
+  vatRatePercent: z
+    .string()
+    .refine(
+      (v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0 && parseFloat(v) <= 100,
+      "VAT rate must be 0–100"
+    ),
+  notes: z.string().optional(),
+});
+
+export type DealInput = z.infer<typeof dealSchema>;
+
+export const rejectSchema = z.object({
+  reason: z.string().min(1, "Rejection reason is required"),
+});
