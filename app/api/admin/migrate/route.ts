@@ -18,8 +18,7 @@ const STATEMENTS: { name: string; sql: string }[] = [
       \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
       PRIMARY KEY (\`id\`),
       INDEX \`Notification_userId_readAt_idx\` (\`userId\`, \`readAt\`),
-      INDEX \`Notification_createdAt_idx\` (\`createdAt\`),
-      CONSTRAINT \`Notification_userId_fkey\` FOREIGN KEY (\`userId\`) REFERENCES \`User\`(\`id\`) ON DELETE RESTRICT ON UPDATE CASCADE
+      INDEX \`Notification_createdAt_idx\` (\`createdAt\`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   },
 ];

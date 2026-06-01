@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS `Notification` (
   `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   INDEX `Notification_userId_readAt_idx` (`userId`, `readAt`),
-  INDEX `Notification_createdAt_idx` (`createdAt`),
-  CONSTRAINT `Notification_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+  INDEX `Notification_createdAt_idx` (`createdAt`)
+  -- FK to User(id) omitted: existing tables use a different collation than the
+  -- server default for new tables (errno 150). Prisma resolves the relation at
+  -- the app layer, so the DB-level FK is not required.
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
