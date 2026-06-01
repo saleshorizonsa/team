@@ -14,8 +14,9 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const isLoginPage = nextUrl.pathname === "/login";
       const isApiAuth = nextUrl.pathname.startsWith("/api/auth");
+      const isPublicApi = nextUrl.pathname === "/api/version"; // build marker, no data
 
-      if (isApiAuth) return true;
+      if (isApiAuth || isPublicApi) return true;
       if (isLoginPage) {
         // Redirect to dashboard if already authenticated
         if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));
