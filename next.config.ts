@@ -14,8 +14,6 @@ function gitSha(): string {
 
 const withPWA = withPWAInit({
   dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === "development",
   workboxOptions: {
@@ -25,6 +23,11 @@ const withPWA = withPWAInit({
     skipWaiting: true,
     clientsClaim: true,
     cleanupOutdatedCaches: true,
+    // Online-first tool: NO runtime caching of navigations/RSC/API. This keeps
+    // every module's data fresh (no cross-module staleness) and avoids the
+    // default cache's "cacheWillUpdate / _ref is not defined" sw.js crash.
+    // Hashed static build assets are still precached, so install + offline shell work.
+    runtimeCaching: [],
   },
 });
 
