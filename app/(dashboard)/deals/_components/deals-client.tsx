@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Plus, Handshake, Plug, CheckCheck, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ export function DealsClient({
   initialDeals, customers, suppliers, users, rules, participants, defaultVatRate,
   sessionUserId, isAdmin, initialPrefill, openFormOnLoad,
 }: Props) {
+  const router = useRouter();
   const [deals, setDeals] = useState(initialDeals);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<DealStatus | "">("");
@@ -94,6 +96,7 @@ export function DealsClient({
       if (!res.ok) throw new Error((await res.json()).error ?? "Action failed");
       const updated = await res.json();
       upsert(updated);
+      router.refresh(); // invalidate cached server data in other modules (dashboard, reports, commissions)
       if (successMsg) toast.success(successMsg);
       return true;
     } catch (e) {
@@ -118,6 +121,7 @@ export function DealsClient({
       const res = await fetch(`/api/deals/${deleting.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json()).error);
       setDeals((prev) => prev.filter((d) => d.id !== deleting.id));
+      router.refresh();
       toast.success("Deal deleted");
       setDeleting(null);
     } catch (e) {
@@ -166,6 +170,7 @@ export function DealsClient({
       const { approved, skipped, deals: updated } = await res.json();
       (updated as Deal[]).forEach(upsert);
       setSelectedIds(new Set());
+      router.refresh();
       toast.success(`Approved ${approved} deal(s)${skipped ? ` · ${skipped} skipped` : ""}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Bulk approve failed");
@@ -349,7 +354,7 @@ export function DealsClient({
       <DealFormDialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        onSaved={(d) => { upsert(d); setFormOpen(false); }}
+        onSaved={(d) => { upsert(d); setFormOpen(false); router.refresh(); }}
         initial={editing}
         prefill={prefill}
         customers={customers}
