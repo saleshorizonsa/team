@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, KeyRound, Loader2 } from "lucide-react";
+import { Plus, Pencil, KeyRound, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { UserFormDialog } from "./user-form-dialog";
 import type { ManagedUser } from "./settings-types";
@@ -26,6 +27,8 @@ export function UsersManager({ initialUsers, onUsersChange, currentUserId }: Pro
   const [resetting, setResetting] = useState<ManagedUser | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+  const [deleting, setDeleting] = useState<ManagedUser | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   function sync(next: ManagedUser[]) {
     setUsers(next);
@@ -37,6 +40,22 @@ export function UsersManager({ initialUsers, onUsersChange, currentUserId }: Pro
     const next = idx >= 0 ? users.map((u) => (u.id === saved.id ? saved : u)) : [...users, saved];
     sync(next);
     setFormOpen(false);
+  }
+
+  async function doDelete() {
+    if (!deleting) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/users/${deleting.id}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 204) throw new Error((await res.json()).error ?? "Delete failed");
+      sync(users.filter((u) => u.id !== deleting.id));
+      toast.success(`${deleting.fullName} deleted`);
+      setDeleting(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteLoading(false);
+    }
   }
 
   async function doReset() {
@@ -111,6 +130,12 @@ export function UsersManager({ initialUsers, onUsersChange, currentUserId }: Pro
                         className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" title="Reset password">
                         <KeyRound className="h-3.5 w-3.5" />
                       </button>
+                      {u.id !== currentUserId && (
+                        <button onClick={() => setDeleting(u)}
+                          className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" title="Delete user">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -121,6 +146,18 @@ export function UsersManager({ initialUsers, onUsersChange, currentUserId }: Pro
       </CardContent>
 
       <UserFormDialog open={formOpen} onClose={() => setFormOpen(false)} onSaved={onSaved} initial={editing} />
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={doDelete}
+        loading={deleteLoading}
+        title="Delete User"
+        description={deleting
+          ? `Permanently delete ${deleting.fullName} (${deleting.email})? Users tied to deals or commissions can't be deleted — deactivate them instead.`
+          : ""}
+        confirmLabel="Delete"
+      />
 
       <Dialog open={!!resetting} onClose={() => setResetting(null)} title="Reset Password"
         description={resetting ? `Set a new password for ${resetting.fullName}.` : undefined} className="max-w-sm">
