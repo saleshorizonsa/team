@@ -44,7 +44,7 @@ export function UserFormDialog({ open, onClose, onSaved, initial }: Props) {
   async function save() {
     setError("");
     if (!fullName.trim()) { setError("Full name is required"); return; }
-    if (!isEdit && !/^[^@]+@[^@]+\.[^@]+$/.test(email)) { setError("Valid email required"); return; }
+    if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { setError("Valid email required"); return; }
     if (!isEdit && password.length < 8) { setError("Password must be at least 8 characters"); return; }
 
     const shareVal = share === "" ? null : parseFloat(share);
@@ -53,7 +53,7 @@ export function UserFormDialog({ open, onClose, onSaved, initial }: Props) {
     try {
       const url = isEdit ? `/api/users/${initial!.id}` : "/api/users";
       const payload = isEdit
-        ? { fullName, role, commissionSharePercent: shareVal, isActive }
+        ? { fullName, email, role, commissionSharePercent: shareVal, isActive }
         : { fullName, email, password, role, commissionSharePercent: shareVal };
       const res = await fetch(url, {
         method: isEdit ? "PATCH" : "POST",
@@ -81,10 +81,9 @@ export function UserFormDialog({ open, onClose, onSaved, initial }: Props) {
 
         <div className="space-y-1.5">
           <Label htmlFor="email">Email *</Label>
-          <Input id="email" type="email" value={email} disabled={isEdit}
-            onChange={(e) => setEmail(e.target.value)}
-            className={isEdit ? "opacity-60" : ""} />
-          {isEdit && <p className="text-[11px] text-muted-foreground">Email cannot be changed.</p>}
+          <Input id="email" type="email" value={email}
+            onChange={(e) => setEmail(e.target.value)} />
+          {isEdit && <p className="text-[11px] text-muted-foreground">This is also their login — they&apos;ll sign in with the new email.</p>}
         </div>
 
         {!isEdit && (

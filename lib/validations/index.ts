@@ -153,6 +153,7 @@ export type UserCreateInput = z.infer<typeof userCreateSchema>;
 
 export const userUpdateSchema = z.object({
   fullName: z.string().min(1, "Full name is required").max(191),
+  email: z.string().email("Invalid email").max(191),
   role: z.enum(["ADMIN", "USER"]),
   commissionSharePercent: z.number().min(0).max(100).nullable().optional(),
   isActive: z.boolean(),

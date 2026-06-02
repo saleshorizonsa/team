@@ -15,14 +15,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const body = await req.json();
     const data = userUpdateSchema.parse(body);
+    const email = data.email.trim();
 
     // Guard: don't let an admin deactivate or demote themselves into lockout
     if (id === session!.user.id && (!data.isActive || data.role !== "ADMIN")) {
       return Response.json({ error: "You cannot deactivate or demote your own admin account" }, { status: 422 });
     }
 
+    // Guard: email must stay unique across users
+    if (email.toLowerCase() !== user.email.toLowerCase()) {
+      const clash = await db.user.findUnique({ where: { email } });
+      if (clash && clash.id !== id) {
+        return Response.json({ error: "That email is already used by another user" }, { status: 422 });
+      }
+    }
+
     const before = {
-      fullName: user.fullName, role: user.role,
+      fullName: user.fullName, email: user.email, role: user.role,
       commissionSharePercent: user.commissionSharePercent, isActive: user.isActive,
     };
 
@@ -30,6 +39,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       where: { id },
       data: {
         fullName: data.fullName,
+        email,
         role: data.role,
         commissionSharePercent: data.commissionSharePercent ?? null,
         isActive: data.isActive,
@@ -46,7 +56,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       entityType: "User",
       entityId: id,
       before,
-      after: { fullName: updated.fullName, role: updated.role, isActive: updated.isActive },
+      after: { fullName: updated.fullName, email: updated.email, role: updated.role, isActive: updated.isActive },
     });
 
     return Response.json({
